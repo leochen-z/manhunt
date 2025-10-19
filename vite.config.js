@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     allowedHosts: [
-      'hoofless-lelia-unchargeable.ngrok-free.dev'  // ngrok domain
+      'gil-rigoristic-eleanor.ngrok-free.dev'  // ngrok domain
     ],
   },
 })

@@ -1,226 +1,111 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-import './Lobby.css';
+import LobbyNotFound from '../components/LobbyNotFound';
+import LobbyFound from '../components/LobbyFound';
+import LobbyLoading from '../components/LobbyLoading';
+import LobbyError from '../components/LobbyError';
 
 function Lobby() {
-    // Declare state variables
-    const [latitude, setLatitude] = useState(0);
-    const [longitude, setLongitude] = useState(0);
-    const [heading, setHeading] = useState(0);
-    const [playerId, setPlayerId] = useState("");
-    const [lobbyName, setLobbyName] = useState("");
-    const [lobbyData, setLobbyData] = useState([]);
-    const [isHunter, setIsHunter] = useState(false);
-    const [playerName, setPlayerName] = useState("");
-    const [lobbyNotFound, setLobbyNotFound] = useState(false);
+    // Join status enumeration using integers
+    const JOIN_STATUS = {
+        LOADING: 0,
+        SUCCESS: 1,
+        NOT_FOUND: 2,
+        ERROR: 3
+    };
 
-    // Declare constants
+    // State for lobby join result
+    const [joinStatus, setJoinStatus] = useState(JOIN_STATUS.LOADING);
+    const [lobbyData, setLobbyData] = useState({
+        lobbyId: null,
+        lobbyName: null,
+        playerId: null
+    });
+
+    // Constants
     const API_BASE = "https://api.hankinit.work/manhunt-api";
-
-    // Check if device orientation need user permission
-    const needsPermission = typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function";
-    const rotation = needsPermission ? -heading : 180 - heading;
-
-    // Get URL parameters and navigation
     const { lobby_id: lobbyId } = useParams();
-    const navigate = useNavigate();
+    const hasJoinedLobby = useRef(false);
 
     // Makes a POST request to join a group given a group ID
-    async function joinLobby(lobbyId) {
-        try {
-            const response = await fetch(`${API_BASE}/join-lobby`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lobby_id: lobbyId }),
-            });
-
-            if (!response.ok) {
-                if (response.status === 404) {
-                    setLobbyNotFound(true);
-                }
-                throw new Error('Failed to join lobby');
-            }
-
-            const { player_id, lobby_name, is_hunter, name } = await response.json();
-            setPlayerId(player_id);
-            setLobbyName(lobby_name);
-            setIsHunter(is_hunter);
-            setPlayerName(name);
-        } catch (err) {
-            console.error(err);
-        }
-    }
-
-    async function getLobbyData(lobbyId, playerId) {
-        if (!lobbyId || !playerId) return;
-        try {
-            const response = await fetch(`${API_BASE}/get-lobby/?lobby_id=${lobbyId}&player_id=${playerId}`);
-            const data = await response.json();
-            setLobbyData(data.data);
-
-            const currentPlayer = data.data.find(p => p.id === playerId);
-            if (currentPlayer) {
-                setIsHunter(currentPlayer.is_hunter);
-                setPlayerName(currentPlayer.name);
-            }
-        } catch (err) {
-            console.error("Failed to fetch lobby data", err);
-        }
-    }
-
-    async function updateLocation() {
-        if (!lobbyId || !playerId) return;
-        // This function would ideally be wrapped in a try/catch block
-        await fetch(`${API_BASE}/update-location`, {
+    function joinLobby(lobbyId)
+    {
+        // Set status to loading when starting the join attempt
+        setJoinStatus(JOIN_STATUS.LOADING);
+        
+        // Attempts to join a lobby given a lobby ID
+        fetch(`${API_BASE}/join-lobby`,
+        {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lobby_id: lobbyId, player_id: playerId, latitude: latitude, longitude: longitude }),
+            body: JSON.stringify({ lobby_id: lobbyId })
+        })
+        .then(response =>
+        {
+            // If the attempt succeeds, parse JSON and set data
+            if (response.ok)
+            {
+                return response.json().then(data =>
+                {
+                    const { player_id, lobby_name } = data;
+                    setLobbyData({
+                        lobbyId: lobbyId,
+                        lobbyName: lobby_name,
+                        playerId: player_id
+                    });
+                    setJoinStatus(JOIN_STATUS.SUCCESS);
+                });
+            }
+            // If the attempt fails because the lobby was not found, set join state to not found
+            else if (response.status === 400)
+            {
+                setJoinStatus(JOIN_STATUS.NOT_FOUND);
+            }
+            // If the attempt fails for any other reason, set join state to error
+            else
+            {
+                setJoinStatus(JOIN_STATUS.ERROR);
+            }
+        })
+        .catch(error =>
+        {
+            console.error('Network error:', error);
+            setJoinStatus(JOIN_STATUS.ERROR);
         });
     }
 
-    // New function to handle switching roles
-    async function handleSwitchRole() {
-        if (!lobbyId || !playerId) return;
-        try {
-            const response = await fetch(`${API_BASE}/update-player`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lobby_id: lobbyId, player_id: playerId, is_hunter: true }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to switch role");
-            }
-            setIsHunter(true);
-            // Refetch lobby data to update the UI with the new role
-            await getLobbyData(lobbyId, playerId);
-
-        } catch (err) {
-            console.error("Error switching role:", err);
-        }
-    }
-
-
-    function showPosition(position) {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        updateLocation();
-    }
-
-    function getLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(showPosition);
-        }
-    }
-
-    const hasJoinedLobby = useRef(false);
-
-    useEffect(() => {
-        getLocation();
-        const intervalId = setInterval(getLocation, 2000);
-        return () => clearInterval(intervalId);
-    }, []);
-
-    useEffect(() => {
+    // Effect to join lobby on component mount
+    useEffect(() =>
+    {
         if (!lobbyId || hasJoinedLobby.current) return;
         joinLobby(lobbyId);
         hasJoinedLobby.current = true;
     }, [lobbyId]);
 
-    useEffect(() => {
-        if (!playerId) return;
-        const intervalId = setInterval(() => {
-            getLobbyData(lobbyId, playerId);
-        }, 2000);
-        return () => clearInterval(intervalId);
-    }, [lobbyId, playerId]);
-
-    async function startCompass() {
-        if (needsPermission) {
-            const result = await DeviceOrientationEvent.requestPermission();
-            if (result === "granted") {
-                window.addEventListener("deviceorientation", handleCompass);
-            }
-        } else if ("AbsoluteOrientationSensor" in window) {
-            try {
-                const sensor = new AbsoluteOrientationSensor({ frequency: 10 });
-                sensor.addEventListener("reading", () => handleCompassAndroid(sensor.quaternion));
-                sensor.addEventListener("error", e => console.error(e.error));
-                sensor.start();
-            } catch (err) {
-                console.error("AbsoluteOrientationSensor error:", err);
-            }
-        } else {
-            window.addEventListener("deviceorientationabsolute", handleCompass, true);
-        }
+    // Render based on lobby join result
+    switch (joinStatus)
+    {
+        case JOIN_STATUS.LOADING:
+            return <LobbyLoading />;
+        
+        case JOIN_STATUS.SUCCESS:
+            return (
+                <LobbyFound
+                    lobbyId={lobbyData.lobbyId}
+                    lobbyName={lobbyData.lobbyName}
+                    playerId={lobbyData.playerId}
+                />
+            );
+        
+        case JOIN_STATUS.NOT_FOUND:
+            return <LobbyNotFound />;
+        
+        case JOIN_STATUS.ERROR:
+            return <LobbyError />;
+        
+        default:
+            return <LobbyError />; // Fallback to error state
     }
-
-    function handleCompass(event) {
-        const compass = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-        setHeading(compass);
-    }
-
-    function handleCompassAndroid(q) {
-        const [x, y, z, w] = q;
-        const siny_cosp = 2 * (w * z + x * y);
-        const cosy_cosp = 1 - 2 * (y * y + z * z);
-        let yaw = Math.atan2(siny_cosp, cosy_cosp) * (180 / Math.PI);
-        if (yaw < 0) yaw += 360;
-        setHeading(yaw);
-    }
-
-    if (lobbyNotFound) {
-        return (
-            <div>
-                <h1>Lobby Not Found</h1>
-                <button onClick={() => navigate('/')}>Go to Home Page</button>
-            </div>
-        );
-    }
-
-    return (
-        <>
-            <button onClick={handleSwitchRole} style={{ marginBottom: '20px' }}>
-                Switch Role
-            </button>
-            <h1>{lobbyName}</h1>
-            <h3>Lobby Id: {lobbyId}</h3>
-            <p>Your Name: {playerName}</p>
-            <p>Your Role: {isHunter ? 'Hunter' : 'Hunted'}</p>
-
-            {isHunter && (
-                <>
-                    <hr />
-                    <h2>Hunter Tools</h2>
-                    <button onClick={startCompass}>Start Compass</button>
-                    <h3>Heading: {Math.round(heading)}°</h3>
-                    <div className="compass">
-                        <img
-                            src="/arrow.png" // Corrected path for public folder
-                            alt="Compass Arrow"
-                            className="arrow"
-                            style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
-                        />
-                    </div>
-                    <div>
-                        <label>
-                            Track a player:
-                            <select>
-                                {lobbyData
-                                    .filter(player => !player.is_hunter)
-                                    .map((player) => (
-                                        <option key={player.id}>
-                                            {player.name}
-                                        </option>
-                                    ))}
-                            </select>
-                        </label>
-                    </div>
-                </>
-            )}
-        </>
-    );
 }
 
 export default Lobby;
