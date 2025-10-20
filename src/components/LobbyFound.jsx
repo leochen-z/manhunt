@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import '../pages/Lobby.css';
 
-function LobbyFound({ lobbyId, lobbyName, playerId }) {
+function LobbyFound({ lobbyConnection, initialPlayerData }) {
+    // Destructure lobby connection data
+    const { lobbyId, lobbyName, playerToken } = lobbyConnection;
+    
+    // Manage player data as local state
+    const [playerData, setPlayerData] = useState(initialPlayerData);
+    
+    // Destructure player data
+    const { player_id, name, is_hunter, latitude: playerLat, longitude: playerLon } = playerData || {};
+    
     // State variables for lobby functionality
-    const [latitude, setLatitude] = useState(0);
-    const [longitude, setLongitude] = useState(0);
     const [heading, setHeading] = useState(0);
     const [lobbyData, setLobbyData] = useState([]);
-    const [isHunter, setIsHunter] = useState(false);
-    const [playerName, setPlayerName] = useState("");
 
     // Constants
     const API_BASE = "https://api.hankinit.work/manhunt-api";
@@ -19,16 +24,20 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
 
     // Fetch lobby data
     async function getLobbyData() {
-        if (!lobbyId || !playerId) return;
+        if (!lobbyId || !player_id) return;
         try {
-            const response = await fetch(`${API_BASE}/get-lobby/?lobby_id=${lobbyId}&player_id=${playerId}`);
+            const response = await fetch(`${API_BASE}/get-lobby/?lobby_id=${lobbyId}&player_id=${player_id}`);
             const data = await response.json();
             setLobbyData(data.data);
 
-            const currentPlayer = data.data.find(p => p.id === playerId);
+            const currentPlayer = data.data.find(p => p.id === player_id);
             if (currentPlayer) {
-                setIsHunter(currentPlayer.is_hunter);
-                setPlayerName(currentPlayer.name);
+                // Update local player data
+                setPlayerData(prevData => ({
+                    ...prevData,
+                    is_hunter: currentPlayer.is_hunter,
+                    name: currentPlayer.name
+                }));
             }
         } catch (err) {
             console.error("Failed to fetch lobby data", err);
@@ -37,12 +46,17 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
 
     // Update location
     async function updateLocation() {
-        if (!lobbyId || !playerId) return;
+        if (!lobbyId || !player_id) return;
         try {
             await fetch(`${API_BASE}/update-location`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lobby_id: lobbyId, player_id: playerId, latitude: latitude, longitude: longitude }),
+                body: JSON.stringify({ 
+                    lobby_id: lobbyId, 
+                    player_id: player_id, 
+                    latitude: playerLat, 
+                    longitude: playerLon 
+                }),
             });
         } catch (err) {
             console.error("Failed to update location", err);
@@ -51,18 +65,24 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
 
     // Handle switching roles
     async function handleSwitchRole() {
-        if (!lobbyId || !playerId) return;
+        if (!lobbyId || !player_id) return;
         try {
             const response = await fetch(`${API_BASE}/update-player`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ lobby_id: lobbyId, player_id: playerId, is_hunter: true }),
+                body: JSON.stringify({ lobby_id: lobbyId, player_id: player_id, is_hunter: true }),
             });
 
             if (!response.ok) {
                 throw new Error("Failed to switch role");
             }
-            setIsHunter(true);
+            
+            // Update local player data
+            setPlayerData(prevData => ({
+                ...prevData,
+                is_hunter: true
+            }));
+            
             // Refetch lobby data to update the UI with the new role
             await getLobbyData();
 
@@ -73,8 +93,17 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
 
     // Location functions
     function showPosition(position) {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
+        const newLat = position.coords.latitude;
+        const newLon = position.coords.longitude;
+        
+        // Update local player data
+        setPlayerData(prevData => ({
+            ...prevData,
+            latitude: newLat,
+            longitude: newLon,
+            location_last_updated: new Date().toISOString()
+        }));
+        
         updateLocation();
     }
 
@@ -127,12 +156,12 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
     }, []);
 
     useEffect(() => {
-        if (!playerId) return;
+        if (!player_id) return;
         const intervalId = setInterval(() => {
             getLobbyData();
         }, 2000);
         return () => clearInterval(intervalId);
-    }, [lobbyId, playerId]);
+    }, [lobbyId, player_id]);
 
     return (
         <>
@@ -141,10 +170,10 @@ function LobbyFound({ lobbyId, lobbyName, playerId }) {
             </button>
             <h1>{lobbyName}</h1>
             <h3>Lobby Id: {lobbyId}</h3>
-            <p>Your Name: {playerName}</p>
-            <p>Your Role: {isHunter ? 'Hunter' : 'Hunted'}</p>
+            <p>Your Name: {name}</p>
+            <p>Your Role: {is_hunter ? 'Hunter' : 'Hunted'}</p>
 
-            {isHunter && (
+            {is_hunter && (
                 <>
                     <hr />
                     <h2>Hunter Tools</h2>

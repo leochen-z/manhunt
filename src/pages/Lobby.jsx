@@ -5,7 +5,8 @@ import LobbyFound from '../components/LobbyFound';
 import LobbyLoading from '../components/LobbyLoading';
 import LobbyError from '../components/LobbyError';
 
-function Lobby() {
+function Lobby()
+{
     // Join status enumeration using integers
     const JOIN_STATUS = {
         LOADING: 0,
@@ -16,11 +17,16 @@ function Lobby() {
 
     // State for lobby join result
     const [joinStatus, setJoinStatus] = useState(JOIN_STATUS.LOADING);
-    const [lobbyData, setLobbyData] = useState({
+    
+    // Immutable lobby connection data
+    const [lobbyConnection, setLobbyConnection] = useState({
         lobbyId: null,
         lobbyName: null,
-        playerId: null
+        playerToken: null
     });
+    
+    // Initial player data from API response
+    const [initialPlayerData, setInitialPlayerData] = useState(null);
 
     // Constants
     const API_BASE = "https://api.hankinit.work/manhunt-api";
@@ -47,12 +53,18 @@ function Lobby() {
             {
                 return response.json().then(data =>
                 {
-                    const { player_id, lobby_name } = data;
-                    setLobbyData({
+                    const { lobby_name, player_token, player_data } = data;
+                    
+                    // Set immutable lobby connection data
+                    setLobbyConnection({
                         lobbyId: lobbyId,
                         lobbyName: lobby_name,
-                        playerId: player_id
+                        playerToken: player_token
                     });
+                    
+                    // Store initial player data to pass to LobbyFound
+                    setInitialPlayerData(player_data);
+                    
                     setJoinStatus(JOIN_STATUS.SUCCESS);
                 });
             }
@@ -77,7 +89,7 @@ function Lobby() {
     // Effect to join lobby on component mount
     useEffect(() =>
     {
-        if (!lobbyId || hasJoinedLobby.current) return;
+        if (hasJoinedLobby.current) return;
         joinLobby(lobbyId);
         hasJoinedLobby.current = true;
     }, [lobbyId]);
@@ -91,9 +103,8 @@ function Lobby() {
         case JOIN_STATUS.SUCCESS:
             return (
                 <LobbyFound
-                    lobbyId={lobbyData.lobbyId}
-                    lobbyName={lobbyData.lobbyName}
-                    playerId={lobbyData.playerId}
+                    lobbyConnection={lobbyConnection}
+                    initialPlayerData={initialPlayerData}
                 />
             );
         
