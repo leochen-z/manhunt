@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import PlayerTable from './PlayerTable';
 import PlayerNameEditor from './PlayerNameEditor';
+import RoleSwitcher from './RoleSwitcher';
 
 function LobbyFound({ lobbyConnection, initialPlayerData })
 {
     // Destructure lobby connection data
     const { lobbyId, lobbyName, playerToken } = lobbyConnection;
     
-    // Player data with local state for name updates
+    // Player data with local state for name and role updates
     const [playerName, setPlayerName] = useState(initialPlayerData?.name || '');
+    const [isSeeker, setIsSeeker] = useState(initialPlayerData?.is_seeker || false);
     const { player_id } = initialPlayerData || {};
 
     // State for current location
@@ -97,7 +99,9 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
     return (
         <>
             <h1>{lobbyName}</h1>
-            <h5>Lobby Id: {lobbyId}</h5>
+            <h6>Lobby Id: {lobbyId}</h6>
+
+            <PlayerTable players={otherPlayers} />
             
             <PlayerNameEditor
                 currentName={playerName}
@@ -107,7 +111,13 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
                 onNameUpdate={setPlayerName}
             />
 
-            <PlayerTable players={otherPlayers} />
+            <RoleSwitcher
+                isSeeker={isSeeker}
+                playerId={player_id}
+                lobbyId={lobbyId}
+                playerToken={playerToken}
+                onRoleUpdate={setIsSeeker}
+            />
         </>
     );
 }
