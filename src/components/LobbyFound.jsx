@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PlayerTable from './PlayerTable';
 import PlayerNameEditor from './PlayerNameEditor';
 import RoleSwitcher from './RoleSwitcher';
@@ -14,6 +15,27 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
     const [playerName, setPlayerName] = useState(initialPlayerData?.name || '');
     const [isSeeker, setIsSeeker] = useState(initialPlayerData?.is_seeker || false);
     const { player_id } = initialPlayerData || {};
+
+    const navigate = useNavigate();
+
+    // Function to leave lobby
+    async function leaveLobby()
+    {
+        try {
+            await fetch(`${API_BASE}/leave-lobby`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lobby_id: lobbyId,
+                    player_token: playerToken
+                })
+            });
+        } catch (error) {
+            console.error('Error leaving lobby:', error);
+        } finally {
+            navigate('/');
+        }
+    }
 
     // State for current location
     const [currentLocation, setCurrentLocation] = useState({
@@ -98,10 +120,58 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
         }
     }, [currentLocation, lobbyId, playerToken]);
 
+    // Effect to call leave-lobby API when page unloads
+    useEffect(() =>
+    {
+        function handleBeforeUnload()
+        {
+            if (!lobbyId || !playerToken) return;
+            
+            // Use fetch with keepalive - more reliable than sendBeacon for CORS requests
+            fetch(`${API_BASE}/leave-lobby`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    lobby_id: lobbyId,
+                    player_token: playerToken
+                }),
+                keepalive: true
+            }).catch(error => console.error('Error leaving lobby:', error));
+        }
+
+        // Listen to both beforeunload (refresh/close) and pagehide (mobile)
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', handleBeforeUnload);
+        
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', handleBeforeUnload);
+        };
+    }, [lobbyId, playerToken]);
+
     return (
         <>
-            <h1>{lobbyName}</h1>
-            <h6>{lobbyId}</h6>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <div>
+                    <h1 style={{ margin: 0 }}>{lobbyName}</h1>
+                    <h6 style={{ margin: '5px 0' }}>{lobbyId}</h6>
+                </div>
+                <button
+                    onClick={leaveLobby}
+                    style={{
+                        padding: '10px 20px',
+                        backgroundColor: '#666',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                    }}
+                >
+                    Leave Lobby
+                </button>
+            </div>
 
             <PlayerTable players={otherPlayers} />
             

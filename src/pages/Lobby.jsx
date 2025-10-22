@@ -56,11 +56,12 @@ function Lobby()
                     const { lobby_name, player_token, player_data } = data;
                     
                     // Set immutable lobby connection data
-                    setLobbyConnection({
+                    const connection = {
                         lobbyId: lobbyId,
                         lobbyName: lobby_name,
                         playerToken: player_token
-                    });
+                    };
+                    setLobbyConnection(connection);
                     
                     // Store initial player data to pass to LobbyFound
                     setInitialPlayerData(player_data);
@@ -90,6 +91,7 @@ function Lobby()
     useEffect(() =>
     {
         if (hasJoinedLobby.current) return;
+        
         joinLobby(lobbyId);
         hasJoinedLobby.current = true;
     }, [lobbyId]);
