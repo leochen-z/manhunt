@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import PlayerTable from './PlayerTable';
 import PlayerNameEditor from './PlayerNameEditor';
 import RoleSwitcher from './RoleSwitcher';
+import SeekerView from './SeekerView';
+import HiderView from './HiderView';
 
 function LobbyFound({ lobbyConnection, initialPlayerData })
 {
@@ -99,7 +101,7 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
     return (
         <>
             <h1>{lobbyName}</h1>
-            <h6>Lobby Id: {lobbyId}</h6>
+            <h6>{lobbyId}</h6>
 
             <PlayerTable players={otherPlayers} />
             
@@ -118,6 +120,19 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
                 playerToken={playerToken}
                 onRoleUpdate={setIsSeeker}
             />
+
+            {/* Role-specific views - only one is visible at a time */}
+            {isSeeker ? (
+                <SeekerView 
+                    players={otherPlayers}
+                    currentLocation={currentLocation}
+                />
+            ) : (
+                <HiderView 
+                    players={otherPlayers}
+                    currentLocation={currentLocation}
+                />
+            )}
         </>
     );
 }

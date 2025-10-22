@@ -36,33 +36,38 @@ function PlayerTable({ players })
     return (
         <>
             <h2>Other Players</h2>
-            <table border="1" cellPadding="10" style={{ width: '100%', marginTop: '20px' }}>
+            <table style={{ 
+                width: '100%', 
+                marginTop: '10px', 
+                borderCollapse: 'collapse',
+                fontSize: '14px'
+            }}>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Role</th>
-                        <th>Latitude</th>
-                        <th>Longitude</th>
-                        <th>Last Updated</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>ID</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Name</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Role</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Latitude</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Longitude</th>
+                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Last Updated</th>
                     </tr>
                 </thead>
                 <tbody>
                     {players.length === 0 ? (
                         <tr>
-                            <td colSpan="6" style={{ textAlign: 'center' }}>
+                            <td colSpan="6" style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
                                 No other players in lobby
                             </td>
                         </tr>
                     ) : (
                         players.map((player) => (
                             <tr key={player.player_id}>
-                                <td>{player.player_id}</td>
-                                <td>{player.name}</td>
-                                <td>{player.is_seeker ? 'Seeker' : 'Hider'}</td>
-                                <td>{player.latitude?.toFixed(6) || 'N/A'}</td>
-                                <td>{player.longitude?.toFixed(6) || 'N/A'}</td>
-                                <td>{getTimeAgo(player.location_last_updated)}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.player_id}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.name}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.is_seeker ? 'Seeker' : 'Hider'}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.latitude?.toFixed(6) || 'N/A'}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.longitude?.toFixed(6) || 'N/A'}</td>
+                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{getTimeAgo(player.location_last_updated)}</td>
                             </tr>
                         ))
                     )}
