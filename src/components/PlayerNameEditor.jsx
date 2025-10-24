@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function PlayerNameEditor({ currentName, playerId, lobbyId, playerToken, onNameUpdate })
+function PlayerNameEditor({ currentName, playerId, lobbyId, playerToken, onNameUpdate, onError })
 {
     const [isEditing, setIsEditing] = useState(false);
     const [nameInput, setNameInput] = useState(currentName || '');
@@ -69,6 +69,15 @@ function PlayerNameEditor({ currentName, playerId, lobbyId, playerToken, onNameU
             if (!response.ok)
             {
                 throw new Error('Failed to update name');
+            }
+
+            const data = await response.json();
+            
+            // Check for error statuses in the response
+            if (data.status === 'lobby_not_found' || data.status === 'invalid_player_token')
+            {
+                onError(data.status);
+                return;
             }
 
             // Update parent component

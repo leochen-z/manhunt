@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate })
+function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate, onError })
 {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -35,6 +35,15 @@ function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate }
             if (!response.ok)
             {
                 throw new Error('Failed to update role');
+            }
+
+            const data = await response.json();
+            
+            // Check for error statuses in the response
+            if (data.status === 'lobby_not_found' || data.status === 'invalid_player_token')
+            {
+                onError(data.status);
+                return;
             }
 
             // Update parent component

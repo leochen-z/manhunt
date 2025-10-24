@@ -13,7 +13,7 @@ function LobbyError() {
 
     return (
         <div>
-            <h1>Error Joining Lobby</h1>
+            <h1>Unable to Join Lobby</h1>
             <p>There was an error connecting to the lobby. This could be due to:</p>
             <ul>
                 <li>Network connectivity issues</li>

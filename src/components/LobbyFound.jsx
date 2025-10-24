@@ -6,7 +6,7 @@ import RoleSwitcher from './RoleSwitcher';
 import SeekerView from './SeekerView';
 import HiderView from './HiderView';
 
-function LobbyFound({ lobbyConnection, initialPlayerData })
+function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSession })
 {
     // Destructure lobby connection data
     const { lobbyId, lobbyName, playerToken } = lobbyConnection;
@@ -17,6 +17,18 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
     const { player_id } = initialPlayerData || {};
 
     const navigate = useNavigate();
+    
+    // State for current location
+    const [currentLocation, setCurrentLocation] = useState({
+        latitude: null,
+        longitude: null
+    });
+
+    // State for other players in the lobby
+    const [otherPlayers, setOtherPlayers] = useState([]);
+
+    // Constants
+    const API_BASE = "https://api.hankinit.work/manhunt-api";
 
     // Function to leave lobby
     async function leaveLobby()
@@ -33,21 +45,11 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
         } catch (error) {
             console.error('Error leaving lobby:', error);
         } finally {
+            // Clear saved session when user explicitly leaves
+            onClearSession();
             navigate('/');
         }
     }
-
-    // State for current location
-    const [currentLocation, setCurrentLocation] = useState({
-        latitude: null,
-        longitude: null
-    });
-
-    // State for other players in the lobby
-    const [otherPlayers, setOtherPlayers] = useState([]);
-
-    // Constants
-    const API_BASE = "https://api.hankinit.work/manhunt-api";
 
     // Trade player data with server
     async function tradePlayerData()
@@ -74,6 +76,14 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
             }
 
             const data = await response.json();
+            
+            // Check for error statuses in the response
+            if (data.status === 'lobby_not_found' || data.status === 'invalid_player_token')
+            {
+                onError(data.status);
+                return;
+            }
+            
             // Filter out current player as an extra safety measure
             const filteredPlayers = data.other_players.filter(player => player.player_id !== player_id);
             setOtherPlayers(filteredPlayers);
@@ -120,35 +130,6 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
         }
     }, [currentLocation, lobbyId, playerToken]);
 
-    // Effect to call leave-lobby API when page unloads
-    useEffect(() =>
-    {
-        function handleBeforeUnload()
-        {
-            if (!lobbyId || !playerToken) return;
-            
-            // Use fetch with keepalive - more reliable than sendBeacon for CORS requests
-            fetch(`${API_BASE}/leave-lobby`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    lobby_id: lobbyId,
-                    player_token: playerToken
-                }),
-                keepalive: true
-            }).catch(error => console.error('Error leaving lobby:', error));
-        }
-
-        // Listen to both beforeunload (refresh/close) and pagehide (mobile)
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        window.addEventListener('pagehide', handleBeforeUnload);
-        
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-            window.removeEventListener('pagehide', handleBeforeUnload);
-        };
-    }, [lobbyId, playerToken]);
-
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -181,6 +162,7 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
                 lobbyId={lobbyId}
                 playerToken={playerToken}
                 onNameUpdate={setPlayerName}
+                onError={onError}
             />
 
             <RoleSwitcher
@@ -189,6 +171,7 @@ function LobbyFound({ lobbyConnection, initialPlayerData })
                 lobbyId={lobbyId}
                 playerToken={playerToken}
                 onRoleUpdate={setIsSeeker}
+                onError={onError}
             />
 
             {/* Role-specific views - only one is visible at a time */}
