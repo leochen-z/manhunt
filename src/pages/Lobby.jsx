@@ -4,6 +4,8 @@ import LobbyFound from '../components/LobbyFound';
 import LobbyLoading from '../components/LobbyLoading';
 import LobbyError from '../components/LobbyError';
 import PlayerNotFound from '../components/PlayerNotFound';
+import PlayerError from '../components/PlayerError';
+import { joinLobby as apiJoinLobby, API_RESPONSE_STATUS } from '../utils/api.js';
 
 function Lobby()
 {
@@ -13,7 +15,8 @@ function Lobby()
         SUCCESS: 1,
         NOT_FOUND: 2,
         ERROR: 3,
-        PLAYER_NOT_FOUND: 4
+        PLAYER_NOT_FOUND: 4,
+        PLAYER_TIMED_OUT: 5
     };
 
     // State for lobby join result
@@ -30,7 +33,6 @@ function Lobby()
     const [initialPlayerData, setInitialPlayerData] = useState(null);
 
     // Constants
-    const API_BASE = "https://api.hankinit.work/manhunt-api";
     const { lobby_id: lobbyId } = useParams();
     const hasJoinedLobby = useRef(false);
     const STORAGE_KEY = `manhunt_lobby_${lobbyId}`;
@@ -86,6 +88,33 @@ function Lobby()
         }
     }
 
+    // Update player data in the saved session
+    function updatePlayerData(updates)
+    {
+        try {
+            const sessionData = localStorage.getItem(STORAGE_KEY);
+            if (sessionData) {
+                const parsed = JSON.parse(sessionData);
+                
+                // Update the initialPlayerData with the new values
+                if (parsed.initialPlayerData) {
+                    parsed.initialPlayerData = {
+                        ...parsed.initialPlayerData,
+                        ...updates
+                    };
+                    
+                    // Save the updated session
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+                    
+                    // Update the local state as well
+                    setInitialPlayerData(parsed.initialPlayerData);
+                }
+            }
+        } catch (error) {
+            console.error('Error updating player data:', error);
+        }
+    }
+
     // Clean up all expired sessions from localStorage
     function cleanupExpiredSessions()
     {
@@ -129,67 +158,60 @@ function Lobby()
                     .forEach(session => localStorage.removeItem(session.key));
             }
             
-            console.log(`Cleaned up expired sessions. ${sessions.length} total sessions found.`);
+            // Only log if sessions were actually cleaned up
+            const cleanedCount = sessions.filter(s => s.age > SESSION_TIMEOUT).length;
+            if (cleanedCount > 0) {
+                console.log(`Cleaned up ${cleanedCount} expired session(s).`);
+            }
         } catch (error) {
             console.error('Error cleaning up expired sessions:', error);
         }
     }
 
     // Makes a POST request to join a group given a group ID
-    function joinLobby(lobbyId)
+    async function joinLobby(lobbyId)
     {
         // Set status to loading when starting the join attempt
         setJoinStatus(JOIN_STATUS.LOADING);
         
-        // Attempts to join a lobby given a lobby ID
-        fetch(`${API_BASE}/join-lobby`,
-        {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lobby_id: lobbyId })
-        })
-        .then(response =>
-        {
-            // If the attempt succeeds, parse JSON and set data
-            if (response.ok)
-            {
-                return response.json().then(data =>
-                {
-                    const { lobby_name, player_token, player_data } = data;
-                    
-                    // Set immutable lobby connection data
-                    const connection = {
-                        lobbyId: lobbyId,
-                        lobbyName: lobby_name,
-                        playerToken: player_token
-                    };
-                    setLobbyConnection(connection);
-                    
-                    // Store initial player data to pass to LobbyFound
-                    setInitialPlayerData(player_data);
-                    
-                    // Save session to localStorage
-                    saveSession(connection, player_data);
-                    
-                    setJoinStatus(JOIN_STATUS.SUCCESS);
-                });
-            }
-            // If the attempt fails because the lobby was not found, set join state to not found
-            else if (response.status === 400)
-            {
+        try {
+            // Use the centralized API function
+            const data = await apiJoinLobby(lobbyId);
+            
+            const { lobby_name, player_token, player_data } = data;
+            
+            // Set immutable lobby connection data
+            const connection = {
+                lobbyId: lobbyId,
+                lobbyName: lobby_name,
+                playerToken: player_token
+            };
+            setLobbyConnection(connection);
+            
+            // Store initial player data to pass to LobbyFound
+            setInitialPlayerData(player_data);
+            
+            // Save session to localStorage
+            saveSession(connection, player_data);
+            
+            setJoinStatus(JOIN_STATUS.SUCCESS);
+        } catch (error) {
+            console.error('Error joining lobby:', error);
+            
+            // Handle specific API error statuses
+            if (error.status === API_RESPONSE_STATUS.LOBBY_NOT_FOUND) {
                 setJoinStatus(JOIN_STATUS.NOT_FOUND);
-            }
-            // If the attempt fails for any other reason, set join state to error
-            else
-            {
+            } else if (error.status === API_RESPONSE_STATUS.INVALID_PLAYER_TOKEN) {
+                // Clear session when player token is invalid
+                clearSession();
+                setJoinStatus(JOIN_STATUS.PLAYER_TIMED_OUT);
+            } else if (error.status === API_RESPONSE_STATUS.HTTP_ERROR ||
+                      error.status === API_RESPONSE_STATUS.NETWORK_ERROR) {
+                setJoinStatus(JOIN_STATUS.ERROR);
+            } else {
                 setJoinStatus(JOIN_STATUS.ERROR);
             }
-        })
-        .catch(error =>
-        {
-            console.error('Network error:', error);
-            setJoinStatus(JOIN_STATUS.ERROR);
-        });
+        }
     }
 
     // Effect to join lobby on component mount
@@ -222,15 +244,15 @@ function Lobby()
     // Handle errors from child components
     function handleError(errorStatus)
     {
-        if (errorStatus === 'lobby_not_found')
+        if (errorStatus === API_RESPONSE_STATUS.LOBBY_NOT_FOUND)
         {
             setJoinStatus(JOIN_STATUS.NOT_FOUND);
         }
-        else if (errorStatus === 'invalid_player_token')
+        else if (errorStatus === API_RESPONSE_STATUS.INVALID_PLAYER_TOKEN)
         {
             // Clear session when player token is invalid
             clearSession();
-            setJoinStatus(JOIN_STATUS.PLAYER_NOT_FOUND);
+            setJoinStatus(JOIN_STATUS.PLAYER_TIMED_OUT);
         }
         else
         {
@@ -251,6 +273,7 @@ function Lobby()
                     initialPlayerData={initialPlayerData}
                     onError={handleError}
                     onClearSession={clearSession}
+                    onUpdatePlayerData={updatePlayerData}
                 />
             );
         
@@ -259,6 +282,9 @@ function Lobby()
         
         case JOIN_STATUS.PLAYER_NOT_FOUND:
             return <PlayerNotFound />;
+        
+        case JOIN_STATUS.PLAYER_TIMED_OUT:
+            return <PlayerError lobbyId={lobbyId} />;
         
         case JOIN_STATUS.ERROR:
             return <LobbyError />;

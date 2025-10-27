@@ -1,11 +1,9 @@
 import { useState } from 'react';
+import { updatePlayerRole, API_RESPONSE_STATUS } from '../utils/api.js';
 
 function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate, onError })
 {
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const API_BASE = "https://api.hankinit.work/manhunt-api";
 
     // Handle role change
     async function handleRoleChange(newIsSeeker)
@@ -17,42 +15,27 @@ function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate, 
         }
 
         setIsLoading(true);
-        setError('');
 
         try
         {
-            const response = await fetch(`${API_BASE}/update-player`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    lobby_id: lobbyId,
-                    player_token: playerToken,
-                    is_seeker: newIsSeeker
-                })
-            });
-
-            if (!response.ok)
-            {
-                throw new Error('Failed to update role');
-            }
-
-            const data = await response.json();
+            // Use the centralized API function
+            await updatePlayerRole(lobbyId, playerToken, newIsSeeker);
             
-            // Check for error statuses in the response
-            if (data.status === 'lobby_not_found' || data.status === 'invalid_player_token')
-            {
-                onError(data.status);
-                return;
-            }
-
             // Update parent component
             onRoleUpdate(newIsSeeker);
         }
         catch (err)
         {
             console.error('Error updating role:', err);
-            setError('Failed to update role. Please try again.');
+            
+            // Handle API errors - kick user to error page
+            if (err.status === API_RESPONSE_STATUS.LOBBY_NOT_FOUND || 
+                err.status === API_RESPONSE_STATUS.INVALID_PLAYER_TOKEN ||
+                err.status === API_RESPONSE_STATUS.HTTP_ERROR ||
+                err.status === API_RESPONSE_STATUS.NETWORK_ERROR) {
+                onError(err.status);
+            }
+            // For other errors, just log and do nothing
         }
         finally
         {
@@ -60,38 +43,14 @@ function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate, 
         }
     }
 
-    return (
-        <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px' }}>
-                <strong>Your Role:</strong>
-            </label>
-            
-            {/* Segmented Control */}
-            <div style={{
-                display: 'inline-flex',
-                backgroundColor: '#e0e0e0',
-                borderRadius: '8px',
-                padding: '4px',
-                gap: '4px',
-                opacity: isLoading ? 0.6 : 1,
-                pointerEvents: isLoading ? 'none' : 'auto'
-            }}>
+        return (
+        <div className="role-switcher">
+            <div className={`role-controls ${isSeeker ? 'seeker-active' : 'hider-active'}`}>
                 {/* Seeker Button */}
                 <button
                     onClick={() => handleRoleChange(true)}
                     disabled={isLoading}
-                    style={{
-                        padding: '8px 24px',
-                        fontSize: '16px',
-                        fontWeight: isSeeker ? '600' : '400',
-                        border: 'none',
-                        borderRadius: '6px',
-                        backgroundColor: isSeeker ? '#ff4444' : 'transparent',
-                        color: isSeeker ? 'white' : '#333',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        minWidth: '100px'
-                    }}
+                    className={`role-btn seeker ${isSeeker ? 'active' : ''}`}
                 >
                     Seeker
                 </button>
@@ -100,36 +59,11 @@ function RoleSwitcher({ isSeeker, playerId, lobbyId, playerToken, onRoleUpdate, 
                 <button
                     onClick={() => handleRoleChange(false)}
                     disabled={isLoading}
-                    style={{
-                        padding: '8px 24px',
-                        fontSize: '16px',
-                        fontWeight: !isSeeker ? '600' : '400',
-                        border: 'none',
-                        borderRadius: '6px',
-                        backgroundColor: !isSeeker ? '#4CAF50' : 'transparent',
-                        color: !isSeeker ? 'white' : '#333',
-                        cursor: isLoading ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease',
-                        minWidth: '100px'
-                    }}
+                    className={`role-btn hider ${!isSeeker ? 'active' : ''}`}
                 >
                     Hider
                 </button>
             </div>
-
-            {/* Loading state */}
-            {isLoading && (
-                <p style={{ color: '#666', margin: '8px 0 0 0', fontSize: '14px' }}>
-                    Updating role...
-                </p>
-            )}
-
-            {/* Error message */}
-            {error && (
-                <p style={{ color: 'red', margin: '8px 0 0 0', fontSize: '14px' }}>
-                    {error}
-                </p>
-            )}
         </div>
     );
 }

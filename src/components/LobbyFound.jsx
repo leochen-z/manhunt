@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PlayerTable from './PlayerTable';
 import PlayerNameEditor from './PlayerNameEditor';
 import RoleSwitcher from './RoleSwitcher';
 import SeekerView from './SeekerView';
 import HiderView from './HiderView';
+import LobbyHeader from './LobbyHeader';
+import PlayerTableModal from './PlayerTableModal';
+import { tradePlayerData, API_RESPONSE_STATUS } from '../utils/api.js';
 
-function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSession })
+function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSession, onUpdatePlayerData })
 {
     // Destructure lobby connection data
     const { lobbyId, lobbyName, playerToken } = lobbyConnection;
@@ -16,8 +17,13 @@ function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSessio
     const [isSeeker, setIsSeeker] = useState(initialPlayerData?.is_seeker || false);
     const { player_id } = initialPlayerData || {};
 
-    const navigate = useNavigate();
-    
+    // Update session data when player data changes
+    const updatePlayerData = (updates) => {
+        if (onUpdatePlayerData) {
+            onUpdatePlayerData(updates);
+        }
+    };
+
     // State for current location
     const [currentLocation, setCurrentLocation] = useState({
         latitude: null,
@@ -27,62 +33,23 @@ function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSessio
     // State for other players in the lobby
     const [otherPlayers, setOtherPlayers] = useState([]);
 
-    // Constants
-    const API_BASE = "https://api.hankinit.work/manhunt-api";
-
-    // Function to leave lobby
-    async function leaveLobby()
-    {
-        try {
-            await fetch(`${API_BASE}/leave-lobby`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    lobby_id: lobbyId,
-                    player_token: playerToken
-                })
-            });
-        } catch (error) {
-            console.error('Error leaving lobby:', error);
-        } finally {
-            // Clear saved session when user explicitly leaves
-            onClearSession();
-            navigate('/');
-        }
-    }
+    // State for modal
+    const [isPlayerTableModalOpen, setIsPlayerTableModalOpen] = useState(false);
 
     // Trade player data with server
-    async function tradePlayerData()
+    async function tradePlayerDataWithServer()
     {
-        if (!lobbyId || !playerToken || currentLocation.latitude === null || currentLocation.longitude === null) return;
+        if (!lobbyId || !playerToken) return;
         
         try
         {
-            const response = await fetch(`${API_BASE}/trade-player-data`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    lobby_id: lobbyId,
-                    player_token: playerToken,
-                    latitude: currentLocation.latitude,
-                    longitude: currentLocation.longitude
-                })
-            });
-
-            if (!response.ok)
-            {
-                throw new Error('Failed to trade player data');
-            }
-
-            const data = await response.json();
-            
-            // Check for error statuses in the response
-            if (data.status === 'lobby_not_found' || data.status === 'invalid_player_token')
-            {
-                onError(data.status);
-                return;
-            }
+            // Use the centralized API function with optional location data
+            const data = await tradePlayerData(
+                lobbyId, 
+                playerToken, 
+                currentLocation.latitude, 
+                currentLocation.longitude
+            );
             
             // Filter out current player as an extra safety measure
             const filteredPlayers = data.other_players.filter(player => player.player_id !== player_id);
@@ -90,7 +57,17 @@ function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSessio
         }
         catch (error)
         {
-            console.error('Error trading player data:', error);
+            // Handle specific API error statuses
+            if (error.status === API_RESPONSE_STATUS.LOBBY_NOT_FOUND || 
+                error.status === API_RESPONSE_STATUS.INVALID_PLAYER_TOKEN ||
+                error.status === API_RESPONSE_STATUS.HTTP_ERROR ||
+                error.status === API_RESPONSE_STATUS.NETWORK_ERROR) {
+                onError(error.status);
+                return;
+            }
+            
+            // Don't call onError for network errors, just log them
+            // This prevents kicking users out due to temporary network issues
         }
     }
 
@@ -119,74 +96,78 @@ function LobbyFound({ lobbyConnection, initialPlayerData, onError, onClearSessio
         return () => clearInterval(intervalId);
     }, []);
 
-    // Effect to trade player data when location updates
+    // Effect to trade player data when lobby connection is available
     useEffect(() =>
     {
-        if (currentLocation.latitude !== null && currentLocation.longitude !== null)
+        if (lobbyId && playerToken)
         {
-            tradePlayerData();
-            const intervalId = setInterval(tradePlayerData, 2000);
+            tradePlayerDataWithServer();
+            const intervalId = setInterval(tradePlayerDataWithServer, 2000);
             return () => clearInterval(intervalId);
         }
-    }, [currentLocation, lobbyId, playerToken]);
+    }, [lobbyId, playerToken, currentLocation]);
 
     return (
-        <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div>
-                    <h1 style={{ margin: 0 }}>{lobbyName}</h1>
-                    <h6 style={{ margin: '5px 0' }}>{lobbyId}</h6>
-                </div>
-                <button
-                    onClick={leaveLobby}
-                    style={{
-                        padding: '10px 20px',
-                        backgroundColor: '#666',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
+        <div className="lobby-container">
+            <LobbyHeader
+                lobbyId={lobbyId}
+                lobbyName={lobbyName}
+                playerToken={playerToken}
+                onClearSession={onClearSession}
+                onOpenPlayerTable={() => setIsPlayerTableModalOpen(true)}
+            />
+                
+            <div className="player-controls lobby-card-base">
+                <PlayerNameEditor
+                    currentName={playerName}
+                    playerId={player_id}
+                    lobbyId={lobbyId}
+                    playerToken={playerToken}
+                    onNameUpdate={(newName) => {
+                        setPlayerName(newName);
+                        updatePlayerData({ name: newName });
                     }}
-                >
-                    Leave Lobby
-                </button>
+                    onError={onError}
+                />
+
+                <RoleSwitcher
+                    isSeeker={isSeeker}
+                    playerId={player_id}
+                    lobbyId={lobbyId}
+                    playerToken={playerToken}
+                    onRoleUpdate={(newRole) => {
+                        setIsSeeker(newRole);
+                        updatePlayerData({ is_seeker: newRole });
+                    }}
+                    onError={onError}
+                />
+
+                {isSeeker ? (
+                    <SeekerView 
+                        players={otherPlayers}
+                        currentLocation={currentLocation}
+                    />
+                ) : (
+                    <HiderView 
+                        players={otherPlayers}
+                        currentLocation={currentLocation}
+                    />
+                )}
             </div>
 
-            <PlayerTable players={otherPlayers} />
-            
-            <PlayerNameEditor
-                currentName={playerName}
-                playerId={player_id}
-                lobbyId={lobbyId}
-                playerToken={playerToken}
-                onNameUpdate={setPlayerName}
-                onError={onError}
+            {/* Player Table Modal */}
+            <PlayerTableModal
+                players={otherPlayers}
+                currentPlayer={{
+                    player_id: player_id,
+                    name: playerName,
+                    is_seeker: isSeeker,
+                    location_last_updated: Date.now() // Current time since we just updated location
+                }}
+                isOpen={isPlayerTableModalOpen}
+                onClose={() => setIsPlayerTableModalOpen(false)}
             />
-
-            <RoleSwitcher
-                isSeeker={isSeeker}
-                playerId={player_id}
-                lobbyId={lobbyId}
-                playerToken={playerToken}
-                onRoleUpdate={setIsSeeker}
-                onError={onError}
-            />
-
-            {/* Role-specific views - only one is visible at a time */}
-            {isSeeker ? (
-                <SeekerView 
-                    players={otherPlayers}
-                    currentLocation={currentLocation}
-                />
-            ) : (
-                <HiderView 
-                    players={otherPlayers}
-                    currentLocation={currentLocation}
-                />
-            )}
-        </>
+        </div>
     );
 }
 

@@ -64,42 +64,30 @@ function SeekerView({ players, currentLocation })
         : null;
 
     return (
-        <div style={{
-            backgroundColor: '#fff5f5',
-            border: '2px solid #ff4444',
-            borderRadius: '8px',
-            padding: '20px',
-            marginBottom: '20px'
-        }}>
-            <h2 style={{ color: '#ff4444', marginTop: 0 }}>Seeker Mode</h2>
-
+        <div className="seeker-view">
             {hiders.length === 0 ? (
-                <div style={{
-                    padding: '20px',
-                    textAlign: 'center',
-                    color: '#666',
-                    backgroundColor: '#f9f9f9',
-                    borderRadius: '4px'
-                }}>
-                    No hiders in the game yet
+                <div className="no-targets">
+                    No hiders
                 </div>
             ) : (
                 <>
                     {/* Compass Arrow Display */}
                     {selectedHider && (
-                        <CompassArrow
-                            targetLatitude={selectedHider.latitude}
-                            targetLongitude={selectedHider.longitude}
-                            currentLocation={currentLocation}
-                            targetName={selectedHider.name || `Player ${selectedHider.player_id}`}
-                            distance={selectedDistance}
-                        />
+                        <div className="compass-container">
+                            <CompassArrow
+                                targetLatitude={selectedHider.latitude}
+                                targetLongitude={selectedHider.longitude}
+                                currentLocation={currentLocation}
+                                targetName={selectedHider.name || `Player ${selectedHider.player_id}`}
+                                distance={selectedDistance}
+                            />
+                        </div>
                     )}
 
-                    <h3 style={{ fontSize: '16px', marginBottom: '10px', color: '#333' }}>
+                    <h3 className="targets-title">
                         Select Target ({hiders.length} hiders)
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div className="targets-list">
                         {hiders.map((hider) => {
                             const distance = currentLocation.latitude && currentLocation.longitude && hider.latitude && hider.longitude
                                 ? calculateDistance(
@@ -116,30 +104,13 @@ function SeekerView({ players, currentLocation })
                                 <div
                                     key={hider.player_id}
                                     onClick={() => setSelectedHider(hider)}
-                                    style={{
-                                        padding: '12px',
-                                        backgroundColor: isSelected ? '#ffe6e6' : 'white',
-                                        border: isSelected ? '2px solid #ff4444' : '1px solid #ffcccc',
-                                        borderRadius: '6px',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s ease'
-                                    }}
+                                    className={`target-card ${isSelected ? 'selected' : ''}`}
                                 >
-                                    <div style={{ color: '#333' }}>
-                                        <strong>{hider.name || `Player ${hider.player_id}`}</strong>
-                                        {isSelected && <span style={{ marginLeft: '8px', fontSize: '12px', color: '#ff4444' }}>● Tracking</span>}
+                                    <div className="target-info">
+                                        <strong className="target-name">{hider.name || `Player ${hider.player_id}`}</strong>
+                                        {isSelected && <span className="tracking-indicator">● Tracking</span>}
                                     </div>
-                                    <div style={{
-                                        backgroundColor: '#ff4444',
-                                        color: 'white',
-                                        padding: '4px 12px',
-                                        borderRadius: '12px',
-                                        fontSize: '14px',
-                                        fontWeight: '600'
-                                    }}>
+                                    <div className="target-distance">
                                         {formatDistance(distance)}
                                     </div>
                                 </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-function PlayerTable({ players })
+function PlayerTable({ players, currentPlayer })
 {
     // State to force re-render for time updates
     const [, setTick] = useState(0);
@@ -33,47 +33,45 @@ function PlayerTable({ players })
         return () => clearInterval(intervalId);
     }, []);
 
+    // Combine current player and other players
+    const allPlayers = currentPlayer ? [currentPlayer, ...players] : players;
+
     return (
-        <>
-            <h2>Other Players</h2>
-            <table style={{ 
-                width: '100%', 
-                marginTop: '10px', 
-                borderCollapse: 'collapse',
-                fontSize: '14px'
-            }}>
+        <div className="player-table-container">
+            <table className="player-table">
                 <thead>
                     <tr>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>ID</th>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Name</th>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Role</th>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Latitude</th>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Longitude</th>
-                        <th style={{ border: '1px solid #ccc', padding: '8px' }}>Last Updated</th>
+                        <th>Name</th>
+                        <th>Role</th>
+                        <th>Last Updated</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {players.length === 0 ? (
+                    {allPlayers.length === 0 ? (
                         <tr>
-                            <td colSpan="6" style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
-                                No other players in lobby
+                            <td colSpan="3" className="no-players-cell">
+                                No players in lobby
                             </td>
                         </tr>
                     ) : (
-                        players.map((player) => (
-                            <tr key={player.player_id}>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.player_id}</td>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.name}</td>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.is_seeker ? 'Seeker' : 'Hider'}</td>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.latitude?.toFixed(6) || 'N/A'}</td>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{player.longitude?.toFixed(6) || 'N/A'}</td>
-                                <td style={{ border: '1px solid #ccc', padding: '8px' }}>{getTimeAgo(player.location_last_updated)}</td>
+                        allPlayers.map((player, index) => (
+                            <tr key={player.player_id || 'current'} className={index === 0 && currentPlayer ? 'current-player-row' : ''}>
+                                <td className="player-name-cell">
+                                    {player.name || `Player ${player.player_id}`}
+                                    {index === 0 && currentPlayer && <span className="current-player-indicator"> (You)</span>}
+                                </td>
+                                <td>
+                                    <span className={`player-role-badge ${player.is_seeker ? 'seeker' : 'hider'}`}>
+                                        {player.is_seeker ? 'Seeker' : 'Hider'}
+                                    </span>
+                                </td>
+                                <td className="time-cell">{getTimeAgo(player.location_last_updated)}</td>
                             </tr>
                         ))
                     )}
                 </tbody>
             </table>
-        </>
+        </div>
     );
 }
 

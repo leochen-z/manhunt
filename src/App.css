@@ -1,8 +1,25 @@
 #root {
-  max-width: 1280px;
+  width: 100%;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height */
+  overflow: hidden;
+  /* Ensure content respects safe areas */
+  box-sizing: border-box;
+}
+
+/* Mobile adjustments for root */
+@media (max-width: 768px) {
+  #root {
+    padding: 0;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .compass {
@@ -10,9 +27,11 @@
   height: 30vmin;
   position: relative;
   border-radius: 50%;
-  background-color: antiquewhite;
+  background-color: var(--bg-card);
+  border: 2px solid var(--border-primary);
   display: flex;
   margin: 2rem auto;
+  box-shadow: var(--shadow-md);
 }
 
 .arrow {
@@ -24,4 +43,5 @@
     transform: translate(-50%, -50%);
     transform-origin: 50% 54%;
     opacity: 85%;
+    filter: brightness(0) invert(1); /* Make arrow white for dark mode */
 }

@@ -15,17 +15,3 @@ function App() {
 }
 
 export default App;
-/*
-    <button onClick={getLocation}>Click Me For Location</button>
-    <h2>Latitude: {latitude}</h2>
-    <h2>Longitude: {longitude}</h2>
-    <button onClick={startCompass}>Click Me To Start Compass</button>
-    <h2>Heading: {Math.round(heading)}°</h2>
-    <div className="compass">
-      <img 
-      src="arrow.png" 
-      className="arrow"
-      style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
-      />
-    </div>
-*/

@@ -171,41 +171,9 @@ function CompassArrow({ targetLatitude, targetLongitude, currentLocation, target
 
     return (
         <div style={{
-            padding: '20px',
-            backgroundColor: 'white',
-            border: '2px solid #ff4444',
-            borderRadius: '8px',
-            marginBottom: '20px',
+            padding: '10px 0',
             textAlign: 'center'
         }}>
-            <div style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
-                Tracking: <strong style={{ color: '#333' }}>{targetName}</strong>
-            </div>
-            
-            {/* Show permission request button for iOS */}
-            {compassPermission === 'unknown' && (
-                <div style={{ marginBottom: '15px' }}>
-                    <button
-                        onClick={requestCompassPermission}
-                        style={{
-                            padding: '10px 20px',
-                            backgroundColor: '#ff4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            cursor: 'pointer',
-                            fontWeight: '600'
-                        }}
-                    >
-                        Enable Compass
-                    </button>
-                    <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                        Tap to enable device compass for accurate direction
-                    </p>
-                </div>
-            )}
-
             {/* Show message if permission denied */}
             {compassPermission === 'denied' && (
                 <div style={{
@@ -237,8 +205,9 @@ function CompassArrow({ targetLatitude, targetLongitude, currentLocation, target
             {/* Compass Circle with Arrow */}
             <div style={{
                 position: 'relative',
-                width: '200px',
-                height: '200px',
+                width: '100%',
+                maxWidth: '280px',
+                aspectRatio: '1',
                 margin: '0 auto',
                 backgroundColor: '#fff',
                 border: '4px solid #ff4444',
@@ -246,7 +215,8 @@ function CompassArrow({ targetLatitude, targetLongitude, currentLocation, target
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                opacity: compassPermission === 'granted' || compassPermission === 'unsupported' ? 1 : 0.5
+                opacity: compassPermission === 'granted' || compassPermission === 'unsupported' ? 1 : 0.5,
+                boxSizing: 'border-box'
             }}>
                 {/* North indicator */}
                 <div style={{
@@ -256,33 +226,63 @@ function CompassArrow({ targetLatitude, targetLongitude, currentLocation, target
                     transform: 'translateX(-50%)',
                     fontSize: '16px',
                     fontWeight: 'bold',
-                    color: '#666'
+                    color: '#666',
+                    display: compassPermission === 'granted' || compassPermission === 'unsupported' ? 'block' : 'none'
                 }}>
                     N
                 </div>
                 
+                {/* Permission request button in center */}
+                {compassPermission === 'unknown' && (
+                    <button
+                        onClick={requestCompassPermission}
+                        style={{
+                            padding: '0',
+                            width: '80px',
+                            height: '80px',
+                            backgroundColor: '#ff4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            fontSize: '14px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            textAlign: 'center',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        Enable
+                    </button>
+                )}
+                
                 {/* Direction Arrow */}
-                <div style={{
-                    fontSize: '60px',
-                    transform: `rotate(${arrowRotation}deg)`,
-                    transition: 'transform 0.3s ease',
-                    color: '#ff4444'
-                }}>
-                    ↑
-                </div>
+                {(compassPermission === 'granted' || compassPermission === 'unsupported') && (
+                    <div style={{
+                        fontSize: '60px',
+                        transform: `rotate(${arrowRotation}deg)`,
+                        transition: 'transform 0.3s ease',
+                        color: '#ff4444'
+                    }}>
+                        ↑
+                    </div>
+                )}
 
                 {/* Distance display in center */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: '35px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: '#ff4444'
-                }}>
-                    {formatDistance(distance)}
-                </div>
+                {(compassPermission === 'granted' || compassPermission === 'unsupported') && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '35px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        color: '#ff4444'
+                    }}>
+                        {formatDistance(distance)}
+                    </div>
+                )}
             </div>
         </div>
     );
