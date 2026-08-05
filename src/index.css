@@ -1,19 +1,26 @@
 /* ============================================================
    Manhunt — Liquid Glass theme on top of Ionic (iOS mode).
    Ionic owns ALL layout (IonPage/IonHeader/IonContent); this file
-   themes surfaces: translucent, blurred "glass" panels floating
-   over an ambient gradient scene, capsule shapes, specular
-   highlights — in the style of Apple's Liquid Glass design.
+   themes surfaces only.
 
-   SCALING MODEL — everything is device/resolution independent:
+   SCALING MODEL — device/resolution independent:
    • --ui-scale is the single master constant. It feeds the root
      font-size, and every size below is expressed in rem, so
      bumping --ui-scale rescales the entire UI uniformly.
-   • rem/em are CSS-reference units (DPI-independent) and honor the
-     user's browser font-size preference (accessibility).
    • Cross-platform normalization (text-size-adjust, font-smoothing,
      -webkit- prefixes) keeps Apple (WebKit) and Android (Blink)
      rendering consistent.
+
+   SURFACE MODEL — exactly two tiers, to minimize visual variety:
+   • SURFACE 1 = anything sitting directly on the background
+     (cards, the name row, the role segment, the compass dial,
+     modals). Every one of these is the SAME fill, border, blur and
+     specular highlight — no per-component variation.
+   • SURFACE 2 = anything sitting on top of a surface-1 container
+     (list rows, the segment thumb, the name input). Distinctly
+     LIGHTER than its parent, with a brighter hairline and a soft
+     drop shadow so it reads as raised rather than blending in.
+   Nothing else invents its own glass treatment.
    ============================================================ */
 
 :root {
@@ -28,14 +35,14 @@
   --space-lg: 1.5rem;
   --space-xl: 2.1rem;
 
-  /* Corner radii — deliberately generous (the "too small" complaint) */
+  /* Corner radii */
   --radius-sm: 0.85rem;
   --radius-md: 1.2rem;
   --radius-lg: 1.65rem;
   --radius-xl: 2rem;
   --radius-pill: 999px;
 
-  /* Screen-edge padding — a touch more breathing room */
+  /* Screen-edge padding */
   --edge-padding: 1.4rem;
   --ion-padding: var(--edge-padding);
 
@@ -56,26 +63,36 @@
   --ion-color-primary-shade: #6d73e0;
   --ion-color-primary-tint: #8990ff;
 
-  /* Game palette used by the compass + status widgets */
-  --game-danger: #ff5d5d;
+  /* Game palette (semantic accents only — never used as surfaces) */
+  --game-danger: #ff6b6b;
   --game-success: #4cd08a;
   --game-warning: #ffb340;
-  --game-muted: #9aa0b5;
+  --game-muted: #a2a8bd;
 
-  /* Liquid glass tokens */
-  --glass-bg: rgba(255, 255, 255, 0.08);
-  --glass-bg-strong: rgba(255, 255, 255, 0.13);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --glass-highlight: rgba(255, 255, 255, 0.28);
-  --glass-shadow: 0 0.125rem 0.5rem rgba(4, 6, 16, 0.35);
-  --glass-blur: blur(24px) saturate(170%);
-  --glass-radius: var(--radius-lg);
+  /* ---- SURFACE 1: sits directly on the background ---- */
+  --surface-1-bg: rgba(255, 255, 255, 0.075);
+  --surface-1-border: 1px solid rgba(255, 255, 255, 0.14);
+  --surface-1-radius: var(--radius-lg);
+  /* Specular top edge + soft ambient lift — the "liquid glass" lighting */
+  --surface-1-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0.25rem 1rem rgba(0, 0, 0, 0.26);
+  --surface-blur: blur(20px) saturate(160%);
+
+  /* ---- SURFACE 2: sits on top of a surface-1 container ---- */
+  --surface-2-bg: rgba(255, 255, 255, 0.17);
+  --surface-2-bg-hover: rgba(255, 255, 255, 0.22);
+  --surface-2-border: 1px solid rgba(255, 255, 255, 0.24);
+  --surface-2-radius: var(--radius-md);
+  --surface-2-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 0.125rem 0.5rem rgba(0, 0, 0, 0.24);
 
   --ion-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
-  --ion-background-color: #0b0d18;
+  --ion-background-color: #0b0d15;
   --ion-text-color: #f2f3f7;
-  /* Items never paint their own opaque plate — the glass shell does */
+  /* Items never paint their own plate — the surface rules below do */
   --ion-item-background: transparent;
 }
 
@@ -96,13 +113,15 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ===== AMBIENT SCENE (what the glass refracts) ===== */
+/* ===== AMBIENT SCENE =====
+   Deliberately quiet: two closely-related deep blues plus one faint
+   indigo glow. Because the field is near-uniform, every translucent
+   panel reads the same shade wherever it sits — which is what makes
+   the surface tiers below look consistent. */
 body {
   background:
-    radial-gradient(60rem 42rem at 12% 8%, rgba(124, 131, 255, 0.34), transparent 62%),
-    radial-gradient(46rem 38rem at 88% 20%, rgba(255, 93, 129, 0.20), transparent 60%),
-    radial-gradient(64rem 46rem at 50% 100%, rgba(64, 189, 168, 0.22), transparent 62%),
-    #0b0d18 !important;
+    radial-gradient(90rem 60rem at 50% -12%, rgba(124, 131, 255, 0.10), transparent 70%),
+    linear-gradient(180deg, #171a2c 0%, #0e1019 62%, #0b0d15 100%) !important;
   background-attachment: fixed;
 }
 
@@ -110,12 +129,12 @@ ion-content {
   --background: transparent;
 }
 
-/* ===== GLASS HEADERS (ion-header is light DOM — reliable blur) ===== */
+/* ===== HEADER (fixed chrome — tinted, same lighting language) ===== */
 ion-header {
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  background: rgba(16, 18, 32, 0.55);
-  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  background: rgba(19, 22, 38, 0.62);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
@@ -135,14 +154,14 @@ ion-toolbar ion-title {
   letter-spacing: -0.01em;
 }
 
-/* Toolbar icon buttons: small glass capsules.
+/* Toolbar icon buttons — surface-2 chips on the header.
    The border + radius must live on ::part(native) — the element that also
    paints --background — otherwise the host border rounds a pill while the
    background keeps the default (smaller) button rounding. */
 ion-toolbar ion-buttons ion-button {
-  --background: rgba(255, 255, 255, 0.10);
-  --background-hover: rgba(255, 255, 255, 0.16);
-  --border-color: rgba(255, 255, 255, 0.14);
+  --background: var(--surface-2-bg);
+  --background-hover: var(--surface-2-bg-hover);
+  --border-color: rgba(255, 255, 255, 0.24);
   --border-radius: var(--radius-pill);
   --border-style: solid;
   --border-width: 1px;
@@ -152,52 +171,51 @@ ion-toolbar ion-buttons ion-button {
 }
 
 ion-toolbar ion-buttons ion-button[color="danger"] {
-  --background: rgba(255, 93, 93, 0.18);
-  --border-color: rgba(255, 93, 93, 0.35);
+  --background: rgba(255, 107, 107, 0.24);
+  --border-color: rgba(255, 107, 107, 0.42);
 }
 
-/* ===== GLASS CARDS ===== */
+/* ============================================================
+   SURFACE 1 — one identical treatment for every container that
+   sits directly on the background.
+   ============================================================ */
+ion-card,
+ion-list.list-inset,
+ion-list[inset],
+ion-content > ion-item,
+ion-content .glass-item,
+ion-segment,
+.compass-circle-interactive {
+  background: var(--surface-1-bg);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  border: var(--surface-1-border);
+  border-radius: var(--surface-1-radius);
+  box-shadow: var(--surface-1-shadow);
+}
+
 ion-card {
   --background: transparent;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0) 55%), var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
   color: var(--ion-text-color);
 }
 
-/* ===== GLASS LISTS / ITEMS ===== */
 ion-list.list-inset,
 ion-list[inset] {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
   overflow: hidden;
   margin-inline: 0;
 }
 
-ion-item {
-  --background: transparent;
-  --background-hover: rgba(255, 255, 255, 0.06);
-  --border-color: rgba(255, 255, 255, 0.10);
-  --color: var(--ion-text-color);
-}
-
-/* Standalone items (name editor) get their own glass shell */
 ion-content > ion-item,
 ion-content .glass-item {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--glass-radius);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  --background: transparent;
+  --inner-border-width: 0;
   overflow: hidden;
+}
+
+ion-item {
+  --background: transparent;
+  --border-color: rgba(255, 255, 255, 0.10);
+  --color: var(--ion-text-color);
 }
 
 /* ===== HOME PAGE: vertically center the lobby cards ===== */
@@ -208,32 +226,57 @@ ion-content .glass-item {
   min-height: 100%;
 }
 
-/* ===== GLASS INPUT FIELDS (inset + rounded) ===== */
+/* ============================================================
+   SURFACE 2 — anything resting on a surface-1 container.
+   Lighter fill + brighter hairline + drop shadow so it never
+   blends into its parent.
+   ============================================================ */
+ion-item.targets-item,
+ion-item.glass-item ion-input,
 ion-content ion-input.glass-input {
-  --background: rgba(0, 0, 0, 0.22);
-  --border-radius: var(--radius-md);
-  --padding-start: 1.1rem;
-  --padding-end: 1.1rem;
-  --padding-top: 0.85rem;
-  --padding-bottom: 0.85rem;
-  --highlight-color-focused: var(--ion-color-primary);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow:
-    inset 0 2px 6px rgba(4, 6, 16, 0.55),
-    inset 0 1px 0 rgba(0, 0, 0, 0.25),
-    0 1px 0 rgba(255, 255, 255, 0.05);
+  background: var(--surface-2-bg);
+  border: var(--surface-2-border);
+  border-radius: var(--surface-2-radius);
+  box-shadow: var(--surface-2-shadow);
   overflow: hidden;
 }
 
-ion-content ion-input.glass-input.has-focus {
-  border-color: rgba(124, 131, 255, 0.55);
-  box-shadow:
-    inset 0 2px 6px rgba(4, 6, 16, 0.55),
-    0 0 0 3px rgba(124, 131, 255, 0.18);
+ion-item.targets-item {
+  /* Host paints the single fill; the inner native row stays transparent so
+     the two never composite into a heavier, off-model shade. */
+  --background: transparent;
+  --border-radius: var(--surface-2-radius);
+  --inner-border-width: 0;
 }
 
-/* Ionic's solid-fill bottom line — hide it so the rounded shell reads cleanly */
+ion-item.targets-item:hover {
+  background: var(--surface-2-bg-hover);
+}
+
+/* ===== NAME INPUT (surface-2 chip inside the surface-1 name row) ===== */
+ion-item.glass-item ion-input,
+ion-content ion-input.glass-input {
+  --background: transparent;
+  --border-radius: var(--surface-2-radius);
+  --padding-start: 0.9rem;
+  --padding-end: 0.9rem;
+  --padding-top: 0.6rem;
+  --padding-bottom: 0.6rem;
+  --highlight-color-focused: var(--ion-color-primary);
+  /* Vertical breathing room so the surface-1 row stays visible around it */
+  margin-block: 0.55rem;
+}
+
+ion-item.glass-item ion-input.has-focus,
+ion-content ion-input.glass-input.has-focus {
+  border-color: rgba(124, 131, 255, 0.6);
+  box-shadow:
+    var(--surface-2-shadow),
+    0 0 0 3px rgba(124, 131, 255, 0.20);
+}
+
+/* Ionic's solid-fill bottom line — hide it so the rounded chip reads cleanly */
+ion-item.glass-item ion-input::part(container)::after,
 ion-content ion-input.glass-input::part(container)::after {
   display: none;
 }
@@ -248,46 +291,38 @@ ion-content ion-button {
 }
 
 ion-content ion-button[expand="block"] {
-  --background: rgba(124, 131, 255, 0.42);
-  --background-activated: rgba(124, 131, 255, 0.55);
-  --background-hover: rgba(124, 131, 255, 0.50);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  --background: rgba(124, 131, 255, 0.45);
+  --background-activated: rgba(124, 131, 255, 0.58);
+  --background-hover: rgba(124, 131, 255, 0.52);
   border: 1px solid rgba(151, 157, 255, 0.45);
   border-radius: var(--radius-pill);
-  box-shadow: 0 0.5rem 1.5rem rgba(20, 24, 60, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  box-shadow: var(--surface-2-shadow);
   min-height: 3.1rem;
 }
 
 ion-content ion-button[expand="block"][color="success"] {
-  --background: rgba(76, 208, 138, 0.34);
-  --background-activated: rgba(76, 208, 138, 0.46);
-  --background-hover: rgba(76, 208, 138, 0.42);
+  --background: rgba(76, 208, 138, 0.38);
+  --background-activated: rgba(76, 208, 138, 0.5);
+  --background-hover: rgba(76, 208, 138, 0.46);
   border-color: rgba(76, 208, 138, 0.45);
 }
 
 ion-content ion-button[fill="outline"] {
-  --border-color: var(--glass-border);
-  --background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  --border-color: rgba(255, 255, 255, 0.24);
+  --background: var(--surface-2-bg);
   border-radius: var(--radius-pill);
 }
 
-/* ===== GLASS SEGMENT (Seeker/Hider) ===== */
+/* ===== ROLE SEGMENT (surface-1 track, surface-2 thumb) ===== */
 ion-segment {
   --background: transparent;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-pill);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
   box-sizing: border-box;
+  border-radius: var(--radius-pill);
   height: 3.4rem;
   overflow: hidden;
   position: relative;
 }
 
-/* Fill the track; the sliding thumb provides the visual inset */
 ion-segment-button {
   --indicator-color: transparent;
   --color: var(--game-muted);
@@ -319,10 +354,10 @@ ion-segment.role-segment::before {
   left: 0.3rem;
   width: calc(50% - 0.45rem);
   box-sizing: border-box;
-  border: 0.5px solid rgba(255, 255, 255, 0.25);
+  border: var(--surface-2-border);
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  background: var(--surface-2-bg);
+  box-shadow: var(--surface-2-shadow);
   transform: translateX(0);
   transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
@@ -347,17 +382,17 @@ ion-segment.role-segment ion-segment-button {
   margin-block-start: 0;
 }
 
-/* ===== GLASS MODALS & ALERTS ===== */
+/* ===== MODALS & ALERTS (surface-1 language, opaque enough to read) ===== */
 ion-modal {
-  --background: rgba(18, 20, 34, 0.62);
+  --background: rgba(21, 24, 40, 0.86);
   --border-radius: var(--radius-xl);
 }
 
 ion-modal::part(content) {
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  border: var(--surface-1-border);
+  box-shadow: var(--surface-1-shadow);
 }
 
 ion-modal.permissions-dialog {
@@ -383,6 +418,15 @@ ion-modal.permissions-dialog .permissions-dialog-body > h2 {
   margin-block: var(--space-lg);
 }
 
+/* A list inside a modal rests ON the modal container → surface 2 */
+ion-modal ion-list.list-inset,
+ion-modal ion-list[inset] {
+  background: var(--surface-2-bg);
+  border: var(--surface-2-border);
+  border-radius: var(--surface-2-radius);
+  box-shadow: var(--surface-2-shadow);
+}
+
 ion-modal.permissions-dialog ion-list.list-inset,
 ion-modal.permissions-dialog ion-list[inset] {
   margin-inline: 0;
@@ -406,35 +450,33 @@ ion-modal.permissions-dialog ion-label p {
 
 ion-alert.leave-alert .alert-wrapper,
 ion-alert .alert-wrapper {
-  background: rgba(24, 26, 42, 0.70);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
+  background: rgba(21, 24, 40, 0.88);
+  backdrop-filter: var(--surface-blur);
+  -webkit-backdrop-filter: var(--surface-blur);
+  border: var(--surface-1-border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  box-shadow: var(--surface-1-shadow);
 }
 
-/* ===== GLASS BADGES ===== */
+/* ===== BADGES (semantic accents, not surfaces) ===== */
 ion-badge {
   border-radius: var(--radius-pill);
   padding: 0.4rem 0.8rem;
   font-size: var(--fs-sm);
   font-weight: 700;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .distance-badge-danger {
-  --background: rgba(255, 93, 93, 0.42);
+  --background: rgba(255, 107, 107, 0.5);
   --color: #fff;
-  border: 1px solid rgba(255, 93, 93, 0.55);
+  border: 1px solid rgba(255, 107, 107, 0.6);
 }
 
 .distance-badge-safe {
-  --background: rgba(76, 208, 138, 0.34);
+  --background: rgba(76, 208, 138, 0.42);
   --color: #fff;
-  border: 1px solid rgba(76, 208, 138, 0.5);
+  border: 1px solid rgba(76, 208, 138, 0.55);
 }
 
 /* ===== CONNECTION / GPS BANNERS (inside IonHeader) ===== */
@@ -443,19 +485,17 @@ ion-badge {
   font-size: var(--fs-xs);
   font-weight: 600;
   text-align: center;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 .connection-banner-offline {
   background: rgba(255, 179, 64, 0.16);
-  border-top: 1px solid rgba(255, 179, 64, 0.35);
+  border-top: 1px solid rgba(255, 179, 64, 0.3);
   color: #ffcf8a;
 }
 
 .connection-banner-gps {
-  background: rgba(255, 93, 93, 0.16);
-  border-top: 1px solid rgba(255, 93, 93, 0.35);
+  background: rgba(255, 107, 107, 0.16);
+  border-top: 1px solid rgba(255, 107, 107, 0.3);
   color: #ff9d9d;
 }
 
@@ -486,13 +526,12 @@ ion-note.player-freshness,
 .closest-distance {
   font-size: 1.7em;
   font-weight: 700;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
 }
 
 .closest-distance.danger { color: var(--game-danger); }
 .closest-distance.safe { color: var(--game-success); }
 
-/* ===== COMPASS WIDGET — a liquid glass dial ===== */
+/* ===== COMPASS WIDGET — a surface-1 dial ===== */
 .compass-screen {
   display: flex;
   flex-direction: column;
@@ -512,32 +551,13 @@ ion-note.player-freshness,
   position: relative;
   width: min(88vw, 54vh, 27rem);
   aspect-ratio: 1;
+  /* Circular, but otherwise identical to every other surface-1 panel */
   border-radius: 50%;
-  background:
-    radial-gradient(120% 120% at 30% 18%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 45%),
-    rgba(255, 255, 255, 0.07);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    var(--glass-shadow),
-    inset 0 1px 1px rgba(255, 255, 255, 0.30),
-    inset 0 -18px 40px rgba(4, 6, 16, 0.30);
   display: flex;
   align-items: center;
   justify-content: center;
   user-select: none;
   overflow: hidden;
-}
-
-/* Specular sweep across the dial */
-.compass-circle-interactive::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: linear-gradient(125deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 28%, transparent 46%);
-  pointer-events: none;
 }
 
 .compass-circle-interactive.inactive { opacity: 0.6; }
@@ -548,8 +568,6 @@ ion-note.player-freshness,
   color: var(--game-danger);
   transition: transform 0.1s ease-out;
   line-height: 1;
-  -webkit-filter: drop-shadow(0 4px 14px rgba(255, 93, 93, 0.45));
-  filter: drop-shadow(0 4px 14px rgba(255, 93, 93, 0.45));
 }
 
 .compass-player-name {
@@ -568,6 +586,7 @@ ion-note.player-freshness,
 
 .compass-player-name.hidden { display: none; }
 
+/* Readouts on the dial are surface-2 chips */
 .compass-distance-display {
   position: absolute;
   bottom: 12%;
@@ -576,13 +595,11 @@ ion-note.player-freshness,
   font-size: var(--fs-xl);
   font-weight: 700;
   color: #fff;
-  background: rgba(255, 93, 93, 0.28);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: var(--surface-2-bg);
   padding: 0.3rem 1.15rem;
   border-radius: var(--radius-pill);
-  border: 1px solid rgba(255, 93, 93, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  border: var(--surface-2-border);
+  box-shadow: var(--surface-2-shadow);
 }
 
 .compass-freshness {
@@ -602,11 +619,10 @@ ion-note.player-freshness,
   font-weight: 600;
   text-align: center;
   color: #dfe2ec;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--glass-border);
+  background: var(--surface-2-bg);
+  border-radius: var(--surface-2-radius);
+  border: var(--surface-2-border);
+  box-shadow: var(--surface-2-shadow);
   max-width: 85%;
 }
 
@@ -647,26 +663,24 @@ ion-note.player-freshness,
 
 .compass-error-message {
   padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--surface-2-radius);
   margin-bottom: var(--space-sm);
   font-size: var(--fs-sm);
-  border: 1px solid rgba(255, 93, 93, 0.4);
+  border: 1px solid rgba(255, 107, 107, 0.4);
   color: #ff9d9d;
-  background: rgba(255, 93, 93, 0.12);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 107, 107, 0.14);
 }
 
 /* ===== SHARE / QR ===== */
 .share-qr {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   padding: 0.75rem;
   border-radius: var(--radius-lg);
   line-height: 0;
   margin: 0 auto;
   width: fit-content;
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  border: var(--surface-1-border);
+  box-shadow: var(--surface-1-shadow);
 }
 
 .share-qr img {
@@ -722,13 +736,13 @@ ion-note.player-freshness,
 }
 
 .player-role-badge.seeker {
-  background: rgba(255, 93, 93, 0.42);
-  border: 1px solid rgba(255, 93, 93, 0.55);
+  background: rgba(255, 107, 107, 0.5);
+  border: 1px solid rgba(255, 107, 107, 0.6);
 }
 
 .player-role-badge.hider {
-  background: rgba(76, 208, 138, 0.34);
-  border: 1px solid rgba(76, 208, 138, 0.5);
+  background: rgba(76, 208, 138, 0.42);
+  border: 1px solid rgba(76, 208, 138, 0.55);
 }
 
 .current-player-indicator {
@@ -786,18 +800,16 @@ ion-content.lobby-content::part(scroll) {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Closest-seeker summary stays fixed above the scrolling list;
-   same surface and edge highlight as the player list panels */
+/* Closest-seeker summary stays fixed above the scrolling list.
+   Surface styling comes from the shared surface-1 rule — layout only here. */
 ion-card.closest-seeker-card {
   flex-shrink: 0;
   margin-inline: 0;
   margin-block-start: 0;
-  background: rgba(255, 255, 255, 0.10);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
-/* Player list panels (hider targets / active seekers): match the role tab
-   bar width and background; fill remaining height and scroll items inside */
+/* Player list panels (hider targets / active seekers): fill remaining height
+   and scroll items inside. Surface styling is inherited from surface-1. */
 ion-card.targets-card {
   margin-inline: 0;
   margin-block: 0;
@@ -807,8 +819,6 @@ ion-card.targets-card {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.10);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 ion-card.targets-card ion-card-header {
@@ -847,19 +857,6 @@ ion-card.targets-card .targets-card-content {
   gap: var(--space-sm);
 }
 
-ion-item.targets-item {
-  --background: rgba(255, 255, 255, 0.06);
-  --background-hover: rgba(255, 255, 255, 0.10);
-  --border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-  overflow: hidden;
-}
-
 /* Default IonNote gray is illegible on glass — lift it */
 ion-card ion-note,
 ion-item ion-note,
@@ -875,7 +872,7 @@ ion-content ion-note {
   justify-content: center;
   padding: var(--space-lg);
   text-align: center;
-  background: #0b0d18;
+  background: #0b0d15;
   color: #f2f3f7;
 }
 
@@ -884,12 +881,19 @@ ion-content ion-note {
   ion-header,
   ion-card,
   ion-list.list-inset,
+  ion-content > ion-item,
+  ion-content .glass-item,
   ion-segment,
   ion-modal::part(content),
   .compass-circle-interactive {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background: rgba(24, 26, 42, 0.96);
+    background: rgba(26, 29, 46, 0.97);
+  }
+
+  ion-item.targets-item,
+  ion-segment.role-segment::before {
+    background: rgba(52, 57, 80, 0.99);
   }
 }
 
