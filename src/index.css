@@ -46,6 +46,16 @@
   --edge-padding: 1.4rem;
   --ion-padding: var(--edge-padding);
 
+  /* ---- STATIC SIZING ----
+     Base containers and list rows are sized up front for their *fullest*
+     content, so runtime text (long names, "⚠ Close", a freshness line
+     appearing, a Save button showing) can never change their height.
+     Overflowing text is truncated, never reflowed. */
+  --list-item-height: 4rem;
+  --closest-card-height: 6.6rem;
+  --name-row-height: 4.6rem;
+  --calibration-hint-slot: 2.2rem;
+
   /* Type scale (rem) */
   --fs-2xs: 0.78rem;
   --fs-xs: 0.82rem;
@@ -212,6 +222,18 @@ ion-content .glass-item {
   overflow: hidden;
 }
 
+/* Name row: fixed height so the Save button appearing (only when the field
+   is dirty) can't resize the container. */
+ion-item.glass-item {
+  --min-height: var(--name-row-height);
+  height: var(--name-row-height);
+  flex-shrink: 0;
+}
+
+ion-item.glass-item ion-button {
+  flex-shrink: 0;
+}
+
 ion-item {
   --background: transparent;
   --border-color: rgba(255, 255, 255, 0.10);
@@ -247,10 +269,37 @@ ion-item.targets-item {
   --background: transparent;
   --border-radius: var(--surface-2-radius);
   --inner-border-width: 0;
+  /* Fixed row height — a long name or a wide badge truncates, never grows */
+  --min-height: var(--list-item-height);
+  height: var(--list-item-height);
+  flex-shrink: 0;
 }
 
 ion-item.targets-item:hover {
   background: var(--surface-2-bg-hover);
+}
+
+/* ===== LIST ROW TEXT: shrink-to-fit then ellipsis, never wrap ===== */
+ion-item.targets-item ion-label {
+  /* min-width:0 lets the label shrink inside the flex row so the badge
+     keeps its size and the text ellipsizes instead of pushing */
+  min-width: 0;
+  margin-block: 0;
+  overflow: hidden;
+}
+
+ion-item.targets-item ion-label h2,
+ion-item.targets-item ion-label p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Badges are sized by their own content and never compress or wrap */
+ion-item.targets-item ion-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* ===== NAME INPUT (surface-2 chip inside the surface-1 name row) ===== */
@@ -541,10 +590,14 @@ ion-note.player-freshness,
 }
 
 .compass-arrow-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
+  /* Reserve the calibration-hint line up front so the dial never shifts
+     when that hint appears once sensor data starts arriving. */
+  padding-bottom: var(--calibration-hint-slot);
 }
 
 .compass-circle-interactive {
@@ -654,8 +707,16 @@ ion-note.player-freshness,
   font-weight: 600;
 }
 
+/* Sits inside the reserved slot above — adds no layout height */
 .compass-calibration-hint {
-  margin-top: var(--space-sm);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--calibration-hint-slot);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--fs-2xs);
   text-align: center;
   color: var(--game-muted);
@@ -801,11 +862,30 @@ ion-content.lobby-content::part(scroll) {
 }
 
 /* Closest-seeker summary stays fixed above the scrolling list.
-   Surface styling comes from the shared surface-1 rule — layout only here. */
+   Surface styling comes from the shared surface-1 rule — layout only here.
+   Height is fixed and pre-sized for its fullest state (label + distance +
+   the freshness line, which only renders when the fix is stale), so the
+   card never resizes as that line appears or disappears. */
 ion-card.closest-seeker-card {
   flex-shrink: 0;
   margin-inline: 0;
   margin-block-start: 0;
+  height: var(--closest-card-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+ion-card.closest-seeker-card ion-card-content {
+  padding-block: 0;
+}
+
+/* "⚠ Close 12.34km" must stay on one line — wrapping would change height */
+.closest-distance {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Player list panels (hider targets / active seekers): fill remaining height
