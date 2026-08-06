@@ -42,9 +42,15 @@
   --radius-xl: 2rem;
   --radius-pill: 999px;
 
-  /* Screen-edge padding */
+  /* Screen-edge padding. Safe-area insets are added so a notch or a rounded
+     display corner can never shave the side off a container. */
   --edge-padding: 1.4rem;
   --ion-padding: var(--edge-padding);
+  --edge-padding-left: calc(var(--edge-padding) + var(--ion-safe-area-left, 0px));
+  --edge-padding-right: calc(var(--edge-padding) + var(--ion-safe-area-right, 0px));
+
+  /* Room for surface drop shadows inside clipping scroll containers */
+  --shadow-gutter: 1.15rem;
 
   /* ---- STATIC SIZING ----
      Base containers and list rows are sized up front for their *fullest*
@@ -138,6 +144,13 @@ body {
 
 ion-content {
   --background: transparent;
+}
+
+/* Horizontal page padding includes the safe-area inset, so on notched or
+   round-cornered displays the containers are never shaved at the edge. */
+ion-content.ion-padding {
+  --padding-start: var(--edge-padding-left);
+  --padding-end: var(--edge-padding-right);
 }
 
 /* ===== HEADER (fixed chrome — tinted, same lighting language) ===== */
@@ -329,11 +342,28 @@ ion-content ion-input.glass-input {
   --background: transparent;
   --border-radius: var(--surface-2-radius);
   --padding-start: 0.9rem;
-  --padding-end: 0.9rem;
+  --padding-end: 0.4rem;
   --padding-top: 0.6rem;
   --padding-bottom: 0.6rem;
   --highlight-color-focused: var(--ion-color-primary);
   margin-block: 0;
+}
+
+/* Save button rides inside the input chip */
+ion-item.glass-item ion-input ion-button.name-save-btn {
+  --background: rgba(124, 131, 255, 0.75);
+  --background-activated: rgba(124, 131, 255, 0.9);
+  --background-hover: rgba(124, 131, 255, 0.85);
+  --color: #fff;
+  --border-radius: var(--radius-pill);
+  --padding-start: 0.85rem;
+  --padding-end: 0.85rem;
+  --box-shadow: none;
+  height: 2rem;
+  margin: 0;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 ion-item.glass-item ion-input.has-focus,
@@ -865,7 +895,8 @@ ion-content.lobby-content::part(scroll) {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  /* No overflow clip here — min-height:0 already contains the flex children,
+     and clipping would cut the glass shadows of the cards below. */
 }
 
 .lobby-body-top {
@@ -879,6 +910,12 @@ ion-content.lobby-content::part(scroll) {
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* overflow-y:auto forces overflow-x to clip, which would shear the cards'
+     drop shadows flush with their edges and read as a cut-off side. Widen the
+     clip box by --shadow-gutter and pull it back with an equal negative
+     margin: the content width is unchanged, but shadows have room to render. */
+  padding-inline: var(--shadow-gutter);
+  margin-inline: calc(-1 * var(--shadow-gutter));
 }
 
 /* Closest-seeker summary stays fixed above the scrolling list.

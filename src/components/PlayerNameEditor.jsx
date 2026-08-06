@@ -64,18 +64,23 @@ function PlayerNameEditor({ currentName, updatePlayer })
                         disabled={isLoading}
                         onIonInput={(e) => { setNameInput(e.detail.value ?? ''); setError(''); }}
                         onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(); }}
-                    />
-                </div>
-                {isDirty && (
-                    <IonButton
-                        data-testid="name-save"
-                        slot="end"
-                        disabled={isLoading}
-                        onClick={handleSave}
                     >
-                        {isLoading ? '…' : 'Save'}
-                    </IonButton>
-                )}
+                        {/* Save lives inside the input chip, revealed when dirty */}
+                        {isDirty && (
+                            <IonButton
+                                data-testid="name-save"
+                                slot="end"
+                                fill="solid"
+                                size="small"
+                                className="name-save-btn"
+                                disabled={isLoading}
+                                onClick={handleSave}
+                            >
+                                {isLoading ? '…' : 'Save'}
+                            </IonButton>
+                        )}
+                    </IonInput>
+                </div>
             </IonItem>
             {error && (
                 <IonNote color="danger" data-testid="name-error" style={{ display: 'block', padding: '4px 16px' }}>
