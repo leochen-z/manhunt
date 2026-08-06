@@ -58,7 +58,6 @@
      appearing, a Save button showing) can never change their height.
      Overflowing text is truncated, never reflowed. */
   --list-item-height: 4rem;
-  --closest-card-height: 6.6rem;
   /* Sized for the label line + input chip stacked inside the row */
   --name-row-height: 5.3rem;
   --calibration-hint-slot: 2.2rem;
@@ -608,27 +607,9 @@ ion-note.player-freshness,
   color: #d7dbe8;
 }
 
-.proximity-flag {
-  display: inline-block;
-  margin-right: 0.4rem;
-  font-size: 0.65em;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  vertical-align: middle;
-}
-
 .proximity-flag-icon {
   font-weight: 700;
 }
-
-.closest-distance {
-  font-size: 1.7em;
-  font-weight: 700;
-}
-
-.closest-distance.danger { color: var(--game-danger); }
-.closest-distance.safe { color: var(--game-success); }
 
 /* ===== COMPASS WIDGET — a surface-1 dial ===== */
 .compass-screen {
@@ -916,33 +897,6 @@ ion-content.lobby-content::part(scroll) {
      margin: the content width is unchanged, but shadows have room to render. */
   padding-inline: var(--shadow-gutter);
   margin-inline: calc(-1 * var(--shadow-gutter));
-}
-
-/* Closest-seeker summary stays fixed above the scrolling list.
-   Surface styling comes from the shared surface-1 rule — layout only here.
-   Height is fixed and pre-sized for its fullest state (label + distance +
-   the freshness line, which only renders when the fix is stale), so the
-   card never resizes as that line appears or disappears. */
-ion-card.closest-seeker-card {
-  flex-shrink: 0;
-  margin-inline: 0;
-  margin-block-start: 0;
-  height: var(--closest-card-height);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-}
-
-ion-card.closest-seeker-card ion-card-content {
-  padding-block: 0;
-}
-
-/* "⚠ Close 12.34km" must stay on one line — wrapping would change height */
-.closest-distance {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Player list panels (hider targets / active seekers): fill remaining height

@@ -27,46 +27,21 @@ function HiderView({ players, currentLocation })
         );
     }
 
-    // Find closest seeker
-    let closest = null;
-    let minDistance = Infinity;
-    seekers.forEach(seeker => {
-        const distance = calculateDistance(
-            currentLocation.latitude,
-            currentLocation.longitude,
-            seeker.latitude,
-            seeker.longitude
-        );
-        if (distance !== null && distance < minDistance) {
-            minDistance = distance;
-            closest = seeker;
-        }
-    });
-    const closestDistance = closest ? minDistance : null;
-    const closestIsDanger = closestDistance !== null && closestDistance < 100;
-    const closestStale = closest
-        ? (isStale(closest.location_last_updated) || closest.connected === false)
-        : false;
+    // Sort by distance, closest first; seekers without a location go last
+    const sortedSeekers = seekers
+        .map(seeker => ({
+            seeker,
+            distance: calculateDistance(
+                currentLocation.latitude,
+                currentLocation.longitude,
+                seeker.latitude,
+                seeker.longitude
+            )
+        }))
+        .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
 
     return (
         <>
-            <IonCard className="closest-seeker-card" data-testid="closest-seeker">
-                <IonCardContent className="ion-text-center">
-                    <IonNote>Closest Seeker</IonNote>
-                    <div className={`closest-distance ${closestIsDanger ? 'danger' : 'safe'}`} data-testid="closest-distance">
-                        {closestIsDanger && (
-                            <span className="proximity-flag" aria-label="Danger, seeker is close">⚠ Close</span>
-                        )}
-                        {formatDistance(closestDistance)}
-                    </div>
-                    {closest && closestStale && (
-                        <IonNote className="player-freshness">
-                            updated {getTimeAgo(closest.location_last_updated)}
-                        </IonNote>
-                    )}
-                </IonCardContent>
-            </IonCard>
-
             <IonCard className="targets-card" data-testid="seekers-card">
                 <IonCardHeader>
                     <IonCardTitle data-testid="seekers-title">
@@ -75,13 +50,7 @@ function HiderView({ players, currentLocation })
                 </IonCardHeader>
                 <IonCardContent className="targets-card-content">
                     <div className="targets-item-stack" data-testid="seekers-list">
-                        {seekers.map((seeker) => {
-                            const distance = calculateDistance(
-                                currentLocation.latitude,
-                                currentLocation.longitude,
-                                seeker.latitude,
-                                seeker.longitude
-                            );
+                        {sortedSeekers.map(({ seeker, distance }) => {
                             const danger = distance !== null && distance < 100;
                             const stale = isStale(seeker.location_last_updated) || seeker.connected === false;
 
