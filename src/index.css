@@ -53,7 +53,8 @@
      Overflowing text is truncated, never reflowed. */
   --list-item-height: 4rem;
   --closest-card-height: 6.6rem;
-  --name-row-height: 4.6rem;
+  /* Sized for the label line + input chip stacked inside the row */
+  --name-row-height: 5.3rem;
   --calibration-hint-slot: 2.2rem;
 
   /* Type scale (rem) */
@@ -302,6 +303,26 @@ ion-item.targets-item ion-badge {
   white-space: nowrap;
 }
 
+/* ===== NAME FIELD — label lives in the row, above the input chip ===== */
+.name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  min-width: 0;
+  padding-block: 0.5rem;
+}
+
+ion-item.glass-item ion-note.name-field-label {
+  font-size: var(--fs-2xs);
+  line-height: 1.2;
+  padding-inline-start: 0.2rem;
+  /* The label is fixed text — it must never wrap and resize the row */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ===== NAME INPUT (surface-2 chip inside the surface-1 name row) ===== */
 ion-item.glass-item ion-input,
 ion-content ion-input.glass-input {
@@ -312,8 +333,7 @@ ion-content ion-input.glass-input {
   --padding-top: 0.6rem;
   --padding-bottom: 0.6rem;
   --highlight-color-focused: var(--ion-color-primary);
-  /* Vertical breathing room so the surface-1 row stays visible around it */
-  margin-block: 0.55rem;
+  margin-block: 0;
 }
 
 ion-item.glass-item ion-input.has-focus,

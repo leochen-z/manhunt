@@ -53,16 +53,19 @@ function PlayerNameEditor({ currentName, updatePlayer })
     return (
         <>
             <IonItem className="glass-item">
-                <IonInput
-                    data-testid="name-input"
-                    label="Your name"
-                    labelPlacement="stacked"
-                    maxlength={MAX_NAME_LENGTH}
-                    value={nameInput}
-                    disabled={isLoading}
-                    onIonInput={(e) => { setNameInput(e.detail.value ?? ''); setError(''); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(); }}
-                />
+                {/* Label sits in the row container, outside the input chip */}
+                <div className="name-field">
+                    <IonNote className="name-field-label">Your name</IonNote>
+                    <IonInput
+                        data-testid="name-input"
+                        aria-label="Your name"
+                        maxlength={MAX_NAME_LENGTH}
+                        value={nameInput}
+                        disabled={isLoading}
+                        onIonInput={(e) => { setNameInput(e.detail.value ?? ''); setError(''); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(); }}
+                    />
+                </div>
                 {isDirty && (
                     <IonButton
                         data-testid="name-save"
