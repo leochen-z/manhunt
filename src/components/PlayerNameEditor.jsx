@@ -56,20 +56,22 @@ function PlayerNameEditor({ currentName, updatePlayer })
                 {/* Label sits in the row container, outside the input chip */}
                 <div className="name-field">
                     <IonNote className="name-field-label">Your name</IonNote>
-                    <IonInput
-                        data-testid="name-input"
-                        aria-label="Your name"
-                        maxlength={MAX_NAME_LENGTH}
-                        value={nameInput}
-                        disabled={isLoading}
-                        onIonInput={(e) => { setNameInput(e.detail.value ?? ''); setError(''); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(); }}
-                    >
-                        {/* Save lives inside the input chip, revealed when dirty */}
+                    {/* Save overlays the input's permanently-reserved trailing
+                        strip rather than being slotted into it, so showing the
+                        button can never resize the chip. */}
+                    <div className="name-input-wrap">
+                        <IonInput
+                            data-testid="name-input"
+                            aria-label="Your name"
+                            maxlength={MAX_NAME_LENGTH}
+                            value={nameInput}
+                            disabled={isLoading}
+                            onIonInput={(e) => { setNameInput(e.detail.value ?? ''); setError(''); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && isDirty) handleSave(); }}
+                        />
                         {isDirty && (
                             <IonButton
                                 data-testid="name-save"
-                                slot="end"
                                 fill="solid"
                                 size="small"
                                 className="name-save-btn"
@@ -79,7 +81,7 @@ function PlayerNameEditor({ currentName, updatePlayer })
                                 {isLoading ? '…' : 'Save'}
                             </IonButton>
                         )}
-                    </IonInput>
+                    </div>
                 </div>
             </IonItem>
             {error && (

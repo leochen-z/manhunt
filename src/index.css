@@ -63,8 +63,15 @@
   --list-item-height: 4rem;
   /* Sized for the label line + input chip stacked inside the row */
   --name-row-height: 5.3rem;
+<<<<<<< HEAD
   /* Page-level input chips, and the diameter of the round buttons beside them */
   --field-height: 2.65rem;
+=======
+  /* The input chip's own height, and the trailing strip permanently reserved
+     inside it for the Save button, so the button appearing never resizes it */
+  --name-input-height: 2.9rem;
+  --name-save-slot: 4.4rem;
+>>>>>>> 934654d75c813c050608b36bdb381f5ceed22d08
   --calibration-hint-slot: 2.2rem;
 
   /* Type scale (rem) */
@@ -391,8 +398,29 @@ ion-content ion-input.glass-input {
   margin-block: 0;
 }
 
-/* Save button rides inside the input chip */
-ion-item.glass-item ion-input ion-button.name-save-btn {
+/* The name chip is fixed-size and reserves its trailing strip for Save
+   whether or not the button is showing, so text never reflows and the chip
+   never grows when Save appears. */
+.name-input-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+ion-item.glass-item ion-input {
+  height: var(--name-input-height);
+  --padding-end: var(--name-save-slot);
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+/* Save button is overlaid on the reserved strip — it is out of the chip's
+   flow entirely, so it contributes no height or width of its own */
+.name-input-wrap ion-button.name-save-btn {
+  position: absolute;
+  top: 50%;
+  inset-inline-end: 0.35rem;
+  transform: translateY(-50%);
+  z-index: 2;
   --background: rgba(124, 131, 255, 0.75);
   --background-activated: rgba(124, 131, 255, 0.9);
   --background-hover: rgba(124, 131, 255, 0.85);
