@@ -3,15 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import {
     IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
     IonCard, IonCardHeader, IonCardTitle, IonCardContent,
-    IonInput, IonButton, IonToast
+    IonInput, IonButton, IonIcon, IonToast
 } from '@ionic/react';
+import { qrCodeOutline } from 'ionicons/icons';
 import { createLobby } from '../utils/api.js';
+import QrScanModal from '../components/QrScanModal.jsx';
+
+// Lobby IDs are server-generated UUIDs. Scanned codes are checked against this
+// so pointing the camera at an unrelated QR reports a clear error instead of
+// sending the player to a lobby that was never going to exist.
+const LOBBY_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Home()
 {
     const [newLobbyName, setNewLobbyName] = useState('');
     const [joinLobbyId, setJoinLobbyId] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [toast, setToast] = useState('');
     const navigate = useNavigate();
 
@@ -61,6 +69,22 @@ function Home()
         }
     }
 
+    // Invite codes encode the join URL, so a scan joins straight away — the
+    // same thing that happens when the phone's own camera opens the link.
+    function handleScan(scannedText)
+    {
+        const lobbyId = extractLobbyId(scannedText);
+        if (!LOBBY_ID_PATTERN.test(lobbyId))
+        {
+            setIsScannerOpen(false);
+            setToast("That QR code isn't a Manhunt invite.");
+            return;
+        }
+
+        setIsScannerOpen(false);
+        navigate(`/lobby/${encodeURIComponent(lobbyId)}`);
+    }
+
     return (
         <IonPage data-testid="home-page">
             <IonHeader>
@@ -69,7 +93,7 @@ function Home()
                 </IonToolbar>
             </IonHeader>
             <IonContent className="ion-padding">
-                <div className="home-center">
+                <div className="home-center page-column">
                 <IonCard>
                     <IonCardHeader>
                         <IonCardTitle>Create New Lobby</IonCardTitle>
@@ -100,14 +124,24 @@ function Home()
                         <IonCardTitle>Join Existing Lobby</IonCardTitle>
                     </IonCardHeader>
                     <IonCardContent>
-                        <IonInput
-                            data-testid="join-id-input"
-                            fill="solid"
-                            className="glass-input"
-                            placeholder="Enter lobby ID or paste invite link"
-                            value={joinLobbyId}
-                            onIonInput={(e) => setJoinLobbyId(e.detail.value ?? '')}
-                        />
+                        <div className="join-row">
+                            <IonInput
+                                data-testid="join-id-input"
+                                fill="solid"
+                                className="glass-input"
+                                placeholder="Enter lobby ID"
+                                value={joinLobbyId}
+                                onIonInput={(e) => setJoinLobbyId(e.detail.value ?? '')}
+                            />
+                            <IonButton
+                                data-testid="scan-qr-btn"
+                                className="qr-scan-btn"
+                                aria-label="Scan a lobby QR code"
+                                onClick={() => setIsScannerOpen(true)}
+                            >
+                                <IonIcon slot="icon-only" icon={qrCodeOutline} />
+                            </IonButton>
+                        </div>
                         <IonButton
                             data-testid="join-btn"
                             expand="block"
@@ -120,6 +154,12 @@ function Home()
                     </IonCardContent>
                 </IonCard>
                 </div>
+
+                <QrScanModal
+                    isOpen={isScannerOpen}
+                    onClose={() => setIsScannerOpen(false)}
+                    onScan={handleScan}
+                />
 
                 <IonToast
                     isOpen={!!toast}

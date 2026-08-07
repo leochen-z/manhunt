@@ -49,8 +49,11 @@
   --edge-padding-left: calc(var(--edge-padding) + var(--ion-safe-area-left, 0px));
   --edge-padding-right: calc(var(--edge-padding) + var(--ion-safe-area-right, 0px));
 
-  /* Room for surface drop shadows inside clipping scroll containers */
-  --shadow-gutter: 1.15rem;
+  /* Room for surface drop shadows inside clipping scroll containers. Must cover
+     the shadow's furthest reach — for --surface-1-shadow that is the 0.25rem
+     downward offset plus the 1rem blur — or the container's own corners and
+     shadow get shaved off flush with the clip edge. */
+  --shadow-gutter: 1.4rem;
 
   /* ---- STATIC SIZING ----
      Base containers and list rows are sized up front for their *fullest*
@@ -60,6 +63,8 @@
   --list-item-height: 4rem;
   /* Sized for the label line + input chip stacked inside the row */
   --name-row-height: 5.3rem;
+  /* Page-level input chips, and the diameter of the round buttons beside them */
+  --field-height: 2.65rem;
   --calibration-hint-slot: 2.2rem;
 
   /* Type scale (rem) */
@@ -253,12 +258,50 @@ ion-item {
   --color: var(--ion-text-color);
 }
 
-/* ===== HOME PAGE: vertically center the lobby cards ===== */
-.home-center {
+/* ===== SIMPLE PAGES (landing, loading, error) =====
+   These are a plain column with no inner frame, so ion-content stays the
+   scroller (see .lobby-content for the framed case). This element only
+   centres the column and lets it grow past the screen. */
+.page-column {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* A floor, not a height: the column fills the screen so it can be centred,
+     then grows and hands the overflow to ion-content when content is taller. */
   min-height: 100%;
+}
+
+/* Children keep their intrinsic height instead of being squeezed to fit, so a
+   short screen produces scrollable overflow rather than compressed cards. */
+.page-column > * {
+  flex-shrink: 0;
+}
+
+/* Auto margins centre the content while it fits and collapse to zero once it
+   doesn't — justify-content:center would instead push the first child above the
+   scroll origin, where it can't be reached. */
+.page-column > :first-child {
+  margin-block-start: auto;
+}
+
+.page-column > :last-child {
+  margin-block-end: auto;
+}
+
+/* ===== LANDING PAGE CARD TITLES =====
+   The card headers become size containers so the titles below can be sized
+   against the width actually available to them (padding already subtracted) */
+.home-center ion-card ion-card-header {
+  container-type: inline-size;
+}
+
+/* Card titles always occupy exactly one line and are never clipped: the
+   longest string ("Join Existing Lobby") measures ~9.1em wide, so capping the
+   size at a tenth of the header width leaves it room to fit with headroom for
+   platform font differences. Wide screens keep Ionic's default 1.75rem;
+   narrow phones shrink the title instead of wrapping it. */
+.home-center ion-card ion-card-title {
+  white-space: nowrap;
+  font-size: min(1.75rem, 10cqw);
 }
 
 /* ============================================================
@@ -365,6 +408,16 @@ ion-item.glass-item ion-input ion-button.name-save-btn {
   flex-shrink: 0;
 }
 
+/* Page-level chips are a fixed height so a round button can match them exactly.
+   The name-row input is left alone — it's sized by --name-row-height instead.
+   Flex centring keeps the text on the middle line once the height is fixed
+   rather than letting it sit against the top edge. */
+ion-content ion-input.glass-input {
+  height: var(--field-height);
+  display: flex;
+  align-items: center;
+}
+
 ion-item.glass-item ion-input.has-focus,
 ion-content ion-input.glass-input.has-focus {
   border-color: rgba(124, 131, 255, 0.6);
@@ -377,6 +430,99 @@ ion-content ion-input.glass-input.has-focus {
 ion-item.glass-item ion-input::part(container)::after,
 ion-content ion-input.glass-input::part(container)::after {
   display: none;
+}
+
+/* ===== JOIN ROW: lobby ID field + circular QR-scan button =====
+   Both take their size from --field-height, so the circle's diameter is the
+   field's height by construction rather than by a separate magic number. */
+.join-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.join-row ion-input.glass-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+ion-content ion-button.qr-scan-btn {
+  --background: var(--surface-2-bg);
+  --background-activated: var(--surface-2-bg-hover);
+  --background-hover: var(--surface-2-bg-hover);
+  --border-radius: 50%;
+  --padding-start: 0;
+  --padding-end: 0;
+  --box-shadow: none;
+  width: var(--field-height);
+  height: var(--field-height);
+  margin: 0;
+  flex-shrink: 0;
+  border: var(--surface-2-border);
+  border-radius: 50%;
+  box-shadow: var(--surface-2-shadow);
+}
+
+ion-content ion-button.qr-scan-btn ion-icon {
+  font-size: var(--fs-xl);
+}
+
+/* ===== QR VIEWFINDER (inside the scan sheet) ===== */
+.qr-viewfinder {
+  position: relative;
+  /* Square preview: a QR code is square, and this keeps the framing obvious.
+     Capped against the viewport height as well as the width, so on a short or
+     landscape screen the square shrinks instead of running off the sheet. */
+  aspect-ratio: 1;
+  width: min(100%, 58vh);
+  margin-inline: auto;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: var(--surface-2-border);
+  border-radius: var(--surface-2-radius);
+  box-shadow: var(--surface-2-shadow);
+}
+
+.qr-viewfinder-video {
+  width: 100%;
+  height: 100%;
+  /* Fill the square frame without letterboxing the camera's 4:3 feed */
+  object-fit: cover;
+  display: block;
+}
+
+/* Framing guide — purely visual; decoding uses the whole frame */
+.qr-viewfinder-reticle {
+  position: absolute;
+  inset: 15%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+.qr-viewfinder-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(11, 13, 24, 0.72);
+}
+
+.qr-viewfinder-message {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: #dfe2ec;
+}
+
+.qr-scan-hint {
+  display: block;
+  padding-top: var(--space-sm);
+  text-align: center;
+  font-size: var(--fs-sm);
 }
 
 /* ===== CAPSULE BUTTONS ===== */
@@ -860,11 +1006,17 @@ ion-content h3 {
   letter-spacing: -0.01em;
 }
 
-/* Lobby page: fill the content area so the hider list can scroll internally */
+/* ===== LOBBY PAGE: a fixed frame, not a scrolling column =====
+   This is the one page that never scrolls as a whole: the header, the name row
+   and the role switcher stay put while the player list scrolls inside its card.
+   Note this also opts out of Ionic's keyboard scroll-assist, which only ever
+   scrolls ion-content — fine here, because the name field sits at the top of
+   the frame and a keyboard just shortens the list below it. */
 ion-content.lobby-content {
   --overflow: hidden;
 }
 
+/* Fill the content area so the player list can scroll internally */
 ion-content.lobby-content::part(scroll) {
   display: flex;
   flex-direction: column;
@@ -891,12 +1043,13 @@ ion-content.lobby-content::part(scroll) {
   flex-direction: column;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* overflow-y:auto forces overflow-x to clip, which would shear the cards'
-     drop shadows flush with their edges and read as a cut-off side. Widen the
-     clip box by --shadow-gutter and pull it back with an equal negative
-     margin: the content width is unchanged, but shadows have room to render. */
-  padding-inline: var(--shadow-gutter);
-  margin-inline: calc(-1 * var(--shadow-gutter));
+  /* The card inside fills this box exactly, so the overflow clip lands right on
+     its edges and shears off its rounded corners and drop shadow — the card
+     reads as cut off. Widen the clip box by --shadow-gutter on every side and
+     pull it back with an equal negative margin: the card's size and position
+     are unchanged, but its shadow now has room to render. */
+  padding: var(--shadow-gutter);
+  margin: calc(-1 * var(--shadow-gutter));
 }
 
 /* Player list panels (hider targets / active seekers): fill remaining height
